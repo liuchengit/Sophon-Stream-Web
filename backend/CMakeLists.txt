@@ -11,6 +11,7 @@ find_package(Drogon CONFIG REQUIRED)
 # Find other dependencies
 find_package(OpenSSL REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
+find_package(SQLite3 REQUIRED)
 
 # Include directories
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -32,6 +33,7 @@ target_link_libraries(sophon-stream-web
     OpenSSL::SSL
     OpenSSL::Crypto
     nlohmann_json::nlohmann_json
+    SQLite::SQLite3
 )
 
 # Install
@@ -46,3 +48,22 @@ configure_file(
 
 # Create www directory for frontend build output
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/www)
+
+# Test executables
+add_executable(test_database tests/test_database.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/db/database_manager.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/db/repositories.cpp
+)
+target_link_libraries(test_database PRIVATE nlohmann_json::nlohmann_json SQLite::SQLite3)
+
+add_executable(test_auth tests/test_auth.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/auth/auth_service.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/db/database_manager.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/db/repositories.cpp
+)
+target_link_libraries(test_auth PRIVATE nlohmann_json::nlohmann_json SQLite::SQLite3)
+
+# Enable testing
+enable_testing()
+add_test(NAME DatabaseTests COMMAND test_database)
+add_test(NAME AuthTests COMMAND test_auth)

@@ -29,4 +29,9 @@ export default defineConfig({
     outDir: '../backend/www',
     emptyOutDir: true,
   },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: './src/test/setup.ts',
+  },
 })
