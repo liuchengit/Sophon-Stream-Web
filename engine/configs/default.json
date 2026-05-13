@@ -1,0 +1,53 @@
+{
+    "engine": {
+        "maxGraphs": 8,
+        "maxStreamsPerGraph": 4,
+        "defaultCodec": "h264",
+        "enableTpu": true,
+        "enableBmcv": true
+    },
+    "graphs": [
+        {
+            "name": "default-pipeline",
+            "elements": [
+                {
+                    "type": "decoder",
+                    "name": "h264_decoder",
+                    "params": {
+                        "codec": "h264",
+                        "outputFormat": "nv12"
+                    }
+                },
+                {
+                    "type": "detector",
+                    "name": "yolox_detector",
+                    "params": {
+                        "model": "yolox",
+                        "modelPath": "/models/yolox.bmodel",
+                        "threshold": 0.5,
+                        "nmsThreshold": 0.45
+                    }
+                },
+                {
+                    "type": "tracker",
+                    "name": "bytetrack",
+                    "params": {
+                        "algorithm": "bytetrack",
+                        "trackThreshold": 0.3,
+                        "maxAge": 30,
+                        "minHits": 3
+                    }
+                },
+                {
+                    "type": "osd",
+                    "name": "osd_drawer",
+                    "params": {
+                        "showLabel": true,
+                        "showConfidence": true,
+                        "showTrackId": true
+                    }
+                }
+            ]
+        }
+    ]
+}

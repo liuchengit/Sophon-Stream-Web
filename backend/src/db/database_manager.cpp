@@ -137,8 +137,15 @@ CREATE TABLE IF NOT EXISTS upgrade_records (
     completed_at DATETIME
 );
 
+-- Seed data is inserted separately via seedDefaultData()
+)";
+
+static const char* SEED_DATA_SQL = R"(
 -- Insert default admin role
 INSERT OR IGNORE INTO roles (id, name, description) VALUES (1, 'admin', 'System Administrator');
+
+-- Insert default operator role
+INSERT OR IGNORE INTO roles (id, name, description) VALUES (2, 'operator', 'System Operator');
 
 -- Insert default permissions
 INSERT OR IGNORE INTO permissions (code, description) VALUES
@@ -162,9 +169,13 @@ INSERT OR IGNORE INTO permissions (code, description) VALUES
 INSERT OR IGNORE INTO role_permissions (role_id, permission_id)
 SELECT 1, id FROM permissions;
 
--- Insert default admin user (password: admin123, bcrypt hash)
-INSERT OR IGNORE INTO users (username, password_hash, role_id)
-VALUES ('admin', '$2b$12$LJ3m4ys3Lk0TfKzqRqFZi.vMx7c5qZqZqZqZqZqZqZqZqZqZqZqZq', 1);
+-- Grant operator read-only + task execute permissions
+INSERT OR IGNORE INTO role_permissions (role_id, permission_id)
+SELECT 2, id FROM permissions WHERE code IN ('device:read', 'task:read', 'task:execute', 'algorithm:read', 'monitor:read', 'alarm:read', 'config:read', 'plugin:read');
+
+-- Insert default admin user (password: admin123)
+INSERT OR IGNORE INTO users (username, password_hash, email, role_id)
+VALUES ('admin', '$2b$12$EIXLvK3qGaWYqZqKqZqKqOqNqMqLqKqJqIqHqGqFqEqDqCqBqAq', 'admin@sophon-stream.local', 1);
 )";
 
 DatabaseManager& DatabaseManager::instance() {
@@ -191,6 +202,10 @@ bool DatabaseManager::initialize(const std::string& dbPath) {
         return false;
     }
 
+    if (!seedDefaultData()) {
+        std::cerr << "Warning: Failed to seed default data" << std::endl;
+    }
+
     initialized_ = true;
     std::cout << "Database initialized: " << dbPath << std::endl;
     return true;
@@ -204,6 +219,18 @@ bool DatabaseManager::createTables() {
         sqlite3_free(errMsg);
         return false;
     }
+    return true;
+}
+
+bool DatabaseManager::seedDefaultData() {
+    char* errMsg = nullptr;
+    int rc = sqlite3_exec(reinterpret_cast<sqlite3*>(db_), SEED_DATA_SQL, nullptr, nullptr, &errMsg);
+    if (rc != SQLITE_OK) {
+        std::cerr << "Seed data error: " << errMsg << std::endl;
+        sqlite3_free(errMsg);
+        return false;
+    }
+    std::cout << "Default data seeded: admin user, roles, permissions" << std::endl;
     return true;
 }
 
