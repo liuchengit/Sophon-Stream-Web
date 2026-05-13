@@ -174,3 +174,13 @@
 *.lz
 *.lzma
 *.iso
+
+# Sophon-Stream Web
+build/
+backend/www/
+backend/uploads/
+backend/data/
+backend/logs/
+engine/configs/*.bak
+uploads/
+data/

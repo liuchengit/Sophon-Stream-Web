@@ -1,0 +1,36 @@
+{
+    "listeners": [
+        {
+            "address": "0.0.0.0",
+            "port": 8080
+        }
+    ],
+    "db_clients": [],
+    "app": {
+        "document_root": "./www",
+        "home_page": "index.html",
+        "upload_path": "./uploads",
+        "file_types": [
+            "gif", "png", "jpg", "html", "css", "js",
+            "woff", "woff2", "ttf", "svg", "ico"
+        ],
+        "enable_dynamic_views": false,
+        "dynamic_views_path": ["./views"],
+        "log": {
+            "use_spdlog": true,
+            "log_path": "./logs",
+            "log_level": "DEBUG",
+            "log_size_limit": 104857600
+        }
+    },
+    "enable_ssl": false,
+    "ssl": {
+        "cert_path": "",
+        "key_path": "",
+        "conf_path": ""
+    },
+    "enable_static_file_handler": true,
+    "mime": {
+        "json": "application/json"
+    }
+}

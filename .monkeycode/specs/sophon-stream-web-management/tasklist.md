@@ -1,6 +1,6 @@
 # Sophon-Stream Web 管理系统实施计划
 
-- [ ] 1. 设置项目结构和构建系统
+- [x] 1. 设置项目结构和构建系统
    - 创建前端 frontend/ 目录结构（Vue3 + TypeScript + Vite）
    - 创建后端 backend/ 目录结构（Drogon C++）
    - 创建引擎集成 engine/ 目录结构

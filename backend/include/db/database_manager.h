@@ -1,0 +1,41 @@
+#pragma once
+
+#include <string>
+#include <memory>
+#include <mutex>
+
+namespace sophon {
+namespace web {
+namespace db {
+
+class DatabaseManager {
+public:
+    static DatabaseManager& instance();
+
+    bool initialize(const std::string& dbPath = "data/sophon-web.db");
+    bool execute(const std::string& sql);
+    std::string query(const std::string& sql);
+
+    bool backup(const std::string& backupPath);
+    bool restore(const std::string& backupPath);
+
+    void close();
+
+private:
+    DatabaseManager() = default;
+    ~DatabaseManager();
+
+    DatabaseManager(const DatabaseManager&) = delete;
+    DatabaseManager& operator=(const DatabaseManager&) = delete;
+
+    bool createTables();
+
+    void* db_;
+    std::mutex mutex_;
+    std::string dbPath_;
+    bool initialized_ = false;
+};
+
+} // namespace db
+} // namespace web
+} // namespace sophon
