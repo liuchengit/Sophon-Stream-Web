@@ -11,18 +11,18 @@
    - 创建 Makefile 提供便捷构建命令
    - 配置测试框架（Google Test 用于 C++，Vitest 用于前端）
 
-- [ ] 2. 实现数据库层和 ORM
-   - [ ] 2.1 创建 SQLite 数据库管理器
+- [x] 2. 实现数据库层和 ORM
+   - [x] 2.1 创建 SQLite 数据库管理器
      - 编写 DatabaseManager 类实现数据库连接和初始化
      - 实现数据库迁移脚本创建所有表结构
      - 添加数据库备份和恢复功能
 
-   - [ ] 2.2 实现数据模型类
+   - [x] 2.2 实现数据模型类
      - 定义 User、Role、Permission、Device、Task、Algorithm、AlarmRule、AlarmEvent、MonitoringMetric、ConfigVersion、Plugin、UpgradeRecord 模型类
      - 使用 sqlite_orm 定义表映射和关系
      - 为每个模型实现 CRUD 仓储方法
 
-   - [ ] 2.3 实现数据库事务管理
+   - [x] 2.3 实现数据库事务管理
      - 编写事务封装确保原子操作
      - 实现连接池管理（如需要）
 
@@ -31,14 +31,14 @@
      - 测试事务回滚和异常处理
      - 测试数据库初始化和迁移
 
-- [ ] 3. 实现认证和授权系统
-   - [ ] 3.1 实现 JWT 认证
+- [x] 3. 实现认证和授权系统
+   - [x] 3.1 实现 JWT 认证
      - 集成 jwt-cpp 库实现 Token 签发
      - 编写 AuthController 处理登录/注册请求
      - 实现 Token 验证中间件
      - 实现密码 bcrypt 哈希存储
 
-   - [ ] 3.2 实现 RBAC 权限模型
+   - [x] 3.2 实现 RBAC 权限模型
      - 编写 RBACMiddleware 检查请求权限
      - 实现角色-权限-资源三级控制逻辑
      - 添加权限缓存机制提升性能
