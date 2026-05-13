@@ -160,22 +160,21 @@ const connectWebSocket = () => {
   }
 }
 
-const updateResourceChart = (data: { tpu_usage: number; cpu_usage: number; memory_usage: number }) => {
+const updateResourceChart = (_data: { tpu_usage: number; cpu_usage: number; memory_usage: number }) => {
   if (!resourceChart) return
-  const option = resourceChart.getOption()
-  const xAxis = option.xAxis?.[0]
+  const option = resourceChart.getOption() as any
+  const xAxis = option?.xAxis?.[0]
   const time = new Date().toLocaleTimeString()
 
-  if (xAxis) {
-    const data = (xAxis as any).data || []
-    data.push(time)
-    if (data.length > 20) data.shift()
+  if (xAxis?.data) {
+    xAxis.data.push(time)
+    if (xAxis.data.length > 20) xAxis.data.shift()
   }
 }
 
 const fetchStats = async () => {
   try {
-    const metrics = await monitoringApi.getResources()
+    await monitoringApi.getResources()
     deviceCount.value = 0
     runningTaskCount.value = 0
     alarmCount.value = 0

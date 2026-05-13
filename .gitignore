@@ -184,3 +184,5 @@ backend/logs/
 engine/configs/*.bak
 uploads/
 data/
+*.d.ts
+*.config.js

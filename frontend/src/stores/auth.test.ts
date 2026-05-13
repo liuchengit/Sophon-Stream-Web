@@ -1,6 +1,16 @@
-import { describe, it, expect, vi } from 'vitest'
-import { useAuthStore } from '../src/stores/auth'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
+import { useAuthStore } from './auth'
+
+vi.mock('../api/auth', () => ({
+  authApi: {
+    login: vi.fn().mockResolvedValue({
+      token: 'mock-token',
+      user: { id: 1, username: 'admin', role: 'admin' },
+    }),
+    logout: vi.fn().mockResolvedValue(undefined),
+  },
+}))
 
 describe('Auth Store', () => {
   beforeEach(() => {
@@ -28,16 +38,6 @@ describe('Auth Store', () => {
 
   it('login sets token and user', async () => {
     const store = useAuthStore()
-    // Mock the API call
-    vi.mock('../src/api/auth', () => ({
-      authApi: {
-        login: vi.fn().mockResolvedValue({
-          token: 'mock-token',
-          user: { id: 1, username: 'admin', role: 'admin' },
-        }),
-      },
-    }))
-
     await store.login('admin', 'admin123')
 
     expect(store.isAuthenticated).toBe(true)
