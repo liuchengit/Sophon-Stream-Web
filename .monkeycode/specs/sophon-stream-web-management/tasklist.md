@@ -80,49 +80,49 @@
      - 实现配置验证和回滚逻辑
      - 实现配置变更通知机制
 
-- [ ] 5. 实现后端 RESTful API 服务
-   - [ ] 5.1 配置 Drogon Web 服务器
+- [x] 5. 实现后端 RESTful API 服务
+   - [x] 5.1 配置 Drogon Web 服务器
      - 配置 Drogon config.json 设置端口和静态文件路径
      - 注册所有 Controller 路由
      - 配置 CORS 和静态文件服务
      - 添加 allowedHosts 配置
 
-   - [ ] 5.2 实现设备管理 API
+   - [x] 5.2 实现设备管理 API
      - 实现 DeviceController CRUD 接口
      - 实现设备状态查询和更新
      - 实现设备在线/离线检测
 
-   - [ ] 5.3 实现任务管理 API
+   - [x] 5.3 实现任务管理 API
      - 实现 TaskController CRUD 接口
      - 实现任务启动/停止/暂停/恢复操作
      - 实现任务与 Graph 实例的绑定
 
-   - [ ] 5.4 实现算法管理 API
+   - [x] 5.4 实现算法管理 API
      - 实现 AlgorithmController CRUD 接口
      - 实现算法插件上传和安装
      - 实现算法配置参数管理
 
-   - [ ] 5.5 实现监控数据 API
+   - [x] 5.5 实现监控数据 API
      - 实现 MonitorController 资源数据查询
      - 实现 TPU/CPU/内存指标采集
      - 实现 WebSocket 实时推送 Handler
 
-   - [ ] 5.6 实现报警管理 API
+   - [x] 5.6 实现报警管理 API
      - 实现 AlarmController 报警规则 CRUD
      - 实现报警事件查询和证据下载
      - 实现报警规则引擎和防抖动逻辑
 
-   - [ ] 5.7 实现配置管理 API
+   - [x] 5.7 实现配置管理 API
      - 实现 ConfigController 配置查询和更新
      - 实现配置版本历史查询
      - 实现配置回滚操作
 
-   - [ ] 5.8 实现系统升级 API
+   - [x] 5.8 实现系统升级 API
      - 实现 UpgradeController 升级包上传和验证
      - 实现差分升级和回滚逻辑
      - 实现升级历史记录查询
 
-   - [ ] 5.9 实现插件管理 API
+   - [x] 5.9 实现插件管理 API
      - 实现 PluginController 插件 CRUD
      - 实现插件签名验证和动态加载
      - 实现插件注册和卸载
