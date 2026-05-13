@@ -54,28 +54,28 @@
      - 测试 RBAC 权限检查逻辑
      - 测试未授权访问拦截
 
-- [ ] 4. 实现 sophon-stream 引擎集成层
-   - [ ] 4.1 创建 StreamEngine 封装类
+- [x] 4. 实现 sophon-stream 引擎集成层
+   - [x] 4.1 创建 StreamEngine 封装类
      - 编写 StreamEngine 类封装 sophon-stream Engine 生命周期
      - 实现 Engine 初始化和配置加载
      - 实现 Engine::updateConfig() 热更新接口
 
-   - [ ] 4.2 创建 GraphManager 管理类
+   - [x] 4.2 创建 GraphManager 管理类
      - 编写 GraphManager 实现 Graph 实例创建/销毁
      - 实现多 Graph 并行处理管理
      - 实现 Graph 状态监控和异常处理
 
-   - [ ] 4.3 创建 ElementRegistry 注册器
+   - [x] 4.3 创建 ElementRegistry 注册器
      - 编写 ElementRegistry 管理 Element 注册和配置
      - 实现 JSON 配置文件解析和验证
      - 实现 ROI 坐标同步接口
 
-   - [ ] 4.4 创建 ResultCollector 结果收集器
+   - [x] 4.4 创建 ResultCollector 结果收集器
      - 编写 ResultCollector 通过回调机制收集处理结果
      - 实现结果数据格式化和存储
      - 实现报警条件触发检测
 
-   - [ ] 4.5 创建 ConfigHotUpdater 热更新器
+   - [x] 4.5 创建 ConfigHotUpdater 热更新器
      - 编写配置版本管理机制
      - 实现配置验证和回滚逻辑
      - 实现配置变更通知机制
