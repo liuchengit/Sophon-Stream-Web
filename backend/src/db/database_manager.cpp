@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS algorithms (
     model_path VARCHAR(255),
     config_schema TEXT,
     plugin_path VARCHAR(255),
+    status VARCHAR(20) DEFAULT 'inactive',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -176,6 +177,79 @@ SELECT 2, id FROM permissions WHERE code IN ('device:read', 'task:read', 'task:e
 -- Insert default admin user (password: admin123)
 INSERT OR IGNORE INTO users (username, password_hash, email, role_id)
 VALUES ('admin', '$2b$12$EIXLvK3qGaWYqZqKqZqKqOqNqMqLqKqJqIqHqGqFqEqDqCqBqAq', 'admin@sophon-stream.local', 1);
+
+-- Seed devices
+INSERT OR IGNORE INTO devices (id, name, type, ip_address, port, status, model, firmware_version) VALUES
+    (1, 'BM1684X-Edge-01', 'tpu', '192.168.1.101', 8080, 'online', 'BM1684X', 'v2.1.0'),
+    (2, 'BM1684X-Edge-02', 'tpu', '192.168.1.102', 8080, 'online', 'BM1684X', 'v2.1.0'),
+    (3, 'BM1684-Edge-03', 'tpu', '192.168.1.103', 8080, 'offline', 'BM1684', 'v1.8.3'),
+    (4, 'Camera-IPC-01', 'camera', '192.168.1.201', 554, 'online', 'Hikvision DS-2CD2T47G2-L', 'V5.6.5'),
+    (5, 'Camera-IPC-02', 'camera', '192.168.1.202', 554, 'online', 'Dahua IPC-HFW5442T', 'V2.820.0000'),
+    (6, 'Camera-IPC-03', 'camera', '192.168.1.203', 554, 'offline', 'Hikvision DS-2CD2T47G2-L', 'V5.6.5');
+
+-- Seed algorithms
+INSERT OR IGNORE INTO algorithms (id, name, version, type, model_path, config_schema, plugin_path, status) VALUES
+    (1, 'YOLOX-Person', '1.0.0', 'detection', '/models/yolox_person.bmodel', '{"confidence":0.5,"nms":0.45}', '/plugins/yolox.so', 'active'),
+    (2, 'YOLOX-Vehicle', '1.0.0', 'detection', '/models/yolox_vehicle.bmodel', '{"confidence":0.5,"nms":0.45}', '/plugins/yolox.so', 'active'),
+    (3, 'ByteTrack', '1.2.0', 'tracking', '/models/bytetrack.bmodel', '{"max_age":30,"min_hits":3}', '/plugins/tracker.so', 'active'),
+    (4, 'Face-Detection', '2.0.0', 'detection', '/models/face_detect.bmodel', '{"confidence":0.6}', '/plugins/face.so', 'inactive'),
+    (5, 'Pose-Estimation', '1.1.0', 'pose', '/models/pose_est.bmodel', '{"threshold":0.3}', '/plugins/pose.so', 'active');
+
+-- Seed alarm rules
+INSERT OR IGNORE INTO alarm_rules (id, name, condition_expr, debounce_seconds, notification_channels, enabled) VALUES
+    (1, '人员入侵检测', 'class=="person" AND confidence>0.8', 5, 'webhook,email', 1),
+    (2, '区域越界告警', 'roi_violation==true', 10, 'webhook', 1),
+    (3, '设备离线告警', 'device_status=="offline"', 30, 'email', 1),
+    (4, 'TPU温度过高', 'tpu_temp>85', 60, 'webhook,email', 0);
+
+-- Seed alarm events
+INSERT OR IGNORE INTO alarm_events (id, rule_id, task_id, evidence_path, context) VALUES
+    (1, 1, 1, '/evidences/alarm_001.jpg', '{"class":"person","confidence":0.92,"bbox":[100,200,300,400]}'),
+    (2, 2, 1, '/evidences/alarm_002.jpg', '{"roi_violation":true,"timestamp":"2024-01-15T10:30:00Z"}'),
+    (3, 1, 2, '/evidences/alarm_003.jpg', '{"class":"person","confidence":0.88,"bbox":[150,180,320,410]}'),
+    (4, 3, 0, '', '{"device_id":3,"device_name":"BM1684-Edge-03","reason":"heartbeat_timeout"}');
+
+-- Seed monitoring metrics (recent data)
+INSERT OR IGNORE INTO monitoring_metrics (metric_type, value, recorded_at) VALUES
+    ('cpu', 45.2, datetime('now', '-5 minutes')),
+    ('memory', 62.8, datetime('now', '-5 minutes')),
+    ('tpu', 78.5, datetime('now', '-5 minutes')),
+    ('cpu', 48.1, datetime('now', '-4 minutes')),
+    ('memory', 63.2, datetime('now', '-4 minutes')),
+    ('tpu', 82.3, datetime('now', '-4 minutes')),
+    ('cpu', 42.5, datetime('now', '-3 minutes')),
+    ('memory', 61.9, datetime('now', '-3 minutes')),
+    ('tpu', 75.6, datetime('now', '-3 minutes')),
+    ('cpu', 51.3, datetime('now', '-2 minutes')),
+    ('memory', 64.5, datetime('now', '-2 minutes')),
+    ('tpu', 85.2, datetime('now', '-2 minutes')),
+    ('cpu', 47.8, datetime('now', '-1 minute')),
+    ('memory', 63.0, datetime('now', '-1 minute')),
+    ('tpu', 79.8, datetime('now', '-1 minute')),
+    ('cpu', 46.5, datetime('now')),
+    ('memory', 62.5, datetime('now')),
+    ('tpu', 77.2, datetime('now'));
+
+-- Seed tasks
+INSERT OR IGNORE INTO tasks (id, name, description, device_id, graph_config, status, schedule_cron) VALUES
+    (1, '园区人员检测', '主要出入口人员检测与计数', 1, '{"elements":[{"type":"decoder","source":"rtsp://192.168.1.201"},{"type":"detector","model":"yolox_person"},{"type":"tracker","algorithm":"bytetrack"},{"type":"output","type":"rtsp"}]}', 'running', ''),
+    (2, '车辆识别统计', '停车场车辆进出识别', 2, '{"elements":[{"type":"decoder","source":"rtsp://192.168.1.202"},{"type":"detector","model":"yolox_vehicle"}]}', 'running', ''),
+    (3, '周界防范', '围墙周界入侵检测', 3, '{"elements":[{"type":"decoder","source":"rtsp://192.168.1.203"},{"type":"detector","model":"yolox_person"},{"type":"alarm","condition":"roi_violation"}]}', 'stopped', ''),
+    (4, '人脸识别考勤', '办公区域人脸识别打卡', 1, '{"elements":[{"type":"decoder","source":"rtsp://192.168.1.201"},{"type":"detector","model":"face_detect"},{"type":"matcher","threshold":0.8}]}', 'running', '0 9 * * 1-5');
+
+-- Seed plugins
+INSERT OR IGNORE INTO plugins (id, name, version, path, signature, status) VALUES
+    (1, 'yolox-plugin', '1.0.0', '/plugins/yolox.so', 'sha256:abc123', 'active'),
+    (2, 'tracker-plugin', '1.2.0', '/plugins/tracker.so', 'sha256:def456', 'active'),
+    (3, 'face-plugin', '2.0.0', '/plugins/face.so', 'sha256:ghi789', 'inactive');
+
+-- Seed config
+INSERT OR IGNORE INTO config_versions (config_key, config_value, version) VALUES
+    ('system.name', 'Sophon-Stream 边缘AI管理平台', 1),
+    ('system.timezone', 'Asia/Shanghai', 1),
+    ('system.language', 'zh-CN', 1),
+    ('alarm.webhook_url', 'http://192.168.1.100:9090/api/alarm', 1),
+    ('alarm.email_to', 'admin@example.com', 1);
 )";
 
 DatabaseManager& DatabaseManager::instance() {

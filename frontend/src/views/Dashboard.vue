@@ -8,7 +8,7 @@
               <el-icon :size="30"><Monitor /></el-icon>
             </div>
             <div class="stat-info">
-              <div class="stat-value">{{ deviceCount }}</div>
+              <div class="stat-value">{{ stats.devices.total }}</div>
               <div class="stat-label">设备总数</div>
             </div>
           </div>
@@ -21,7 +21,7 @@
               <el-icon :size="30"><VideoCamera /></el-icon>
             </div>
             <div class="stat-info">
-              <div class="stat-value">{{ runningTaskCount }}</div>
+              <div class="stat-value">{{ stats.tasks.running }}</div>
               <div class="stat-label">运行任务</div>
             </div>
           </div>
@@ -34,7 +34,7 @@
               <el-icon :size="30"><Warning /></el-icon>
             </div>
             <div class="stat-info">
-              <div class="stat-value">{{ alarmCount }}</div>
+              <div class="stat-value">{{ stats.alarms.today }}</div>
               <div class="stat-label">今日报警</div>
             </div>
           </div>
@@ -47,7 +47,7 @@
               <el-icon :size="30"><Cpu /></el-icon>
             </div>
             <div class="stat-info">
-              <div class="stat-value">{{ algorithmCount }}</div>
+              <div class="stat-value">{{ stats.algorithms.total }}</div>
               <div class="stat-label">算法插件</div>
             </div>
           </div>
@@ -84,13 +84,17 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import * as echarts from 'echarts'
 import { Monitor, VideoCamera, Warning, Cpu } from '@element-plus/icons-vue'
+import { dashboardApi } from '../api/dashboard'
 import { monitoringApi } from '../api/monitoring'
 import type { ECharts } from 'echarts'
+import { ElMessage } from 'element-plus'
 
-const deviceCount = ref(0)
-const runningTaskCount = ref(0)
-const alarmCount = ref(0)
-const algorithmCount = ref(0)
+const stats = ref({
+  devices: { total: 0, online: 0, offline: 0 },
+  tasks: { total: 0, running: 0, stopped: 0 },
+  alarms: { total: 0, today: 0 },
+  algorithms: { total: 0, active: 0 },
+})
 
 const resourceChartRef = ref<HTMLElement>()
 const taskChartRef = ref<HTMLElement>()
@@ -102,6 +106,7 @@ onMounted(() => {
   initCharts()
   connectWebSocket()
   fetchStats()
+  fetchResourceMetrics()
 })
 
 onUnmounted(() => {
@@ -116,12 +121,12 @@ const initCharts = () => {
     resourceChart.setOption({
       tooltip: { trigger: 'axis' },
       legend: { data: ['TPU', 'CPU', '内存'] },
-      xAxis: { type: 'category', data: [] },
+      xAxis: { type: 'category', data: ['TPU', 'CPU', '内存'] },
       yAxis: { type: 'value', max: 100 },
       series: [
-        { name: 'TPU', type: 'line', data: [], smooth: true, lineStyle: { color: '#409eff' } },
-        { name: 'CPU', type: 'line', data: [], smooth: true, lineStyle: { color: '#67c23a' } },
-        { name: '内存', type: 'line', data: [], smooth: true, lineStyle: { color: '#e6a23c' } },
+        { name: 'TPU', type: 'bar', data: [0], itemStyle: { color: '#409eff' } },
+        { name: 'CPU', type: 'bar', data: [0], itemStyle: { color: '#67c23a' } },
+        { name: '内存', type: 'bar', data: [0], itemStyle: { color: '#e6a23c' } },
       ],
     })
   }
@@ -130,6 +135,7 @@ const initCharts = () => {
     taskChart = echarts.init(taskChartRef.value)
     taskChart.setOption({
       tooltip: { trigger: 'item' },
+      legend: { bottom: '5%' },
       series: [
         {
           type: 'pie',
@@ -160,27 +166,56 @@ const connectWebSocket = () => {
   }
 }
 
-const updateResourceChart = (_data: { tpu_usage: number; cpu_usage: number; memory_usage: number }) => {
+const updateResourceChart = (data: { tpu_usage: number; cpu_usage: number; memory_usage: number }) => {
   if (!resourceChart) return
-  const option = resourceChart.getOption() as any
-  const xAxis = option?.xAxis?.[0]
-  const time = new Date().toLocaleTimeString()
-
-  if (xAxis?.data) {
-    xAxis.data.push(time)
-    if (xAxis.data.length > 20) xAxis.data.shift()
-  }
+  resourceChart.setOption({
+    series: [
+      { name: 'TPU', data: [data.tpu_usage] },
+      { name: 'CPU', data: [data.cpu_usage] },
+      { name: '内存', data: [data.memory_usage] },
+    ],
+  })
 }
 
 const fetchStats = async () => {
   try {
-    await monitoringApi.getResources()
-    deviceCount.value = 0
-    runningTaskCount.value = 0
-    alarmCount.value = 0
-    algorithmCount.value = 0
+    const data = await dashboardApi.getStats()
+    stats.value = data
+    updateTaskChart()
   } catch {
-    // API not available during development
+    ElMessage.error('获取统计数据失败')
+  }
+}
+
+const updateTaskChart = () => {
+  if (!taskChart) return
+  taskChart.setOption({
+    series: [
+      {
+        data: [
+          { value: stats.value.tasks.running, name: '运行中' },
+          { value: stats.value.tasks.stopped, name: '已停止' },
+          { value: stats.value.tasks.total - stats.value.tasks.running - stats.value.tasks.stopped, name: '异常' },
+        ],
+      },
+    ],
+  })
+}
+
+const fetchResourceMetrics = async () => {
+  try {
+    const data = await monitoringApi.getResources()
+    if (resourceChart) {
+      resourceChart.setOption({
+        series: [
+          { name: 'TPU', data: [data.tpu_usage] },
+          { name: 'CPU', data: [data.cpu_usage] },
+          { name: '内存', data: [data.memory_usage] },
+        ],
+      })
+    }
+  } catch {
+    ElMessage.error('获取资源使用数据失败')
   }
 }
 </script>

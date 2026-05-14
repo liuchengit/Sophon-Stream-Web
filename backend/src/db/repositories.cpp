@@ -5,6 +5,7 @@
 #include <iostream>
 #include <chrono>
 #include <iomanip>
+#include <cstring>
 
 static std::string currentTimestamp() {
     auto now = std::chrono::system_clock::now();
@@ -14,25 +15,35 @@ static std::string currentTimestamp() {
     return ss.str();
 }
 
-static int callbackToJson(void* data, int argc, char** argv, char** colName) {
-    std::string* json = static_cast<std::string*>(data);
-    if (json->empty()) {
-        *json = "[";
-    } else {
-        *json += ",";
-    }
-    *json += "{";
+static std::string safeStr(const char* s) {
+    return s ? std::string(s) : "";
+}
+
+static int getIntColumn(char** colName, char** argv, int argc, const char* name, int defaultVal = 0) {
     for (int i = 0; i < argc; i++) {
-        if (i > 0) *json += ",";
-        *json += "\"" + std::string(colName[i]) + "\":";
-        if (argv[i]) {
-            *json += "\"" + std::string(argv[i]) + "\"";
-        } else {
-            *json += "null";
+        if (std::strcmp(colName[i], name) == 0 && argv[i]) {
+            return std::stoi(argv[i]);
         }
     }
-    *json += "}";
-    return 0;
+    return defaultVal;
+}
+
+static std::string getStrColumn(char** colName, char** argv, int argc, const char* name) {
+    for (int i = 0; i < argc; i++) {
+        if (std::strcmp(colName[i], name) == 0) {
+            return safeStr(argv[i]);
+        }
+    }
+    return "";
+}
+
+static double getDoubleColumn(char** colName, char** argv, int argc, const char* name, double defaultVal = 0.0) {
+    for (int i = 0; i < argc; i++) {
+        if (std::strcmp(colName[i], name) == 0 && argv[i]) {
+            return std::stod(argv[i]);
+        }
+    }
+    return defaultVal;
 }
 
 namespace sophon {
@@ -41,21 +52,43 @@ namespace db {
 
 // UserRepository implementation
 
+static int userCallback(void* data, int argc, char** argv, char** colName) {
+    auto* users = static_cast<std::vector<models::User>*>(data);
+    models::User u;
+    u.id = getIntColumn(colName, argv, argc, "id");
+    u.username = getStrColumn(colName, argv, argc, "username");
+    u.password_hash = getStrColumn(colName, argv, argc, "password_hash");
+    u.email = getStrColumn(colName, argv, argc, "email");
+    u.role_id = getIntColumn(colName, argv, argc, "role_id");
+    u.created_at = getStrColumn(colName, argv, argc, "created_at");
+    u.updated_at = getStrColumn(colName, argv, argc, "updated_at");
+    users->push_back(u);
+    return 0;
+}
+
 std::optional<models::User> UserRepository::findByUsername(const std::string& username) {
+    std::vector<models::User> users;
     std::string sql = "SELECT id, username, password_hash, email, role_id, created_at, updated_at FROM users WHERE username='" + username + "'";
-    // Simplified - in production use parameterized queries
-    return std::nullopt; // Placeholder
+    char* errMsg = nullptr;
+    sqlite3_exec(reinterpret_cast<sqlite3*>(DatabaseManager::instance().db()), sql.c_str(), userCallback, &users, &errMsg);
+    return users.empty() ? std::nullopt : std::make_optional(users[0]);
 }
 
 std::optional<models::User> UserRepository::findById(int id) {
+    std::vector<models::User> users;
     std::string sql = "SELECT id, username, password_hash, email, role_id, created_at, updated_at FROM users WHERE id=" + std::to_string(id);
-    return std::nullopt; // Placeholder
+    char* errMsg = nullptr;
+    sqlite3_exec(reinterpret_cast<sqlite3*>(DatabaseManager::instance().db()), sql.c_str(), userCallback, &users, &errMsg);
+    return users.empty() ? std::nullopt : std::make_optional(users[0]);
 }
 
 std::vector<models::User> UserRepository::findAll(int page, int limit) {
+    std::vector<models::User> users;
     int offset = (page - 1) * limit;
-    std::string sql = "SELECT id, username, email, role_id, created_at FROM users LIMIT " + std::to_string(limit) + " OFFSET " + std::to_string(offset);
-    return {}; // Placeholder
+    std::string sql = "SELECT id, username, email, role_id, created_at, updated_at FROM users LIMIT " + std::to_string(limit) + " OFFSET " + std::to_string(offset);
+    char* errMsg = nullptr;
+    sqlite3_exec(reinterpret_cast<sqlite3*>(DatabaseManager::instance().db()), sql.c_str(), userCallback, &users, &errMsg);
+    return users;
 }
 
 int UserRepository::create(const models::User& user) {
@@ -64,7 +97,7 @@ int UserRepository::create(const models::User& user) {
                       user.username + "', '" + user.password_hash + "', '" + user.email + "', " +
                       std::to_string(user.role_id) + ", '" + now + "', '" + now + "')";
     DatabaseManager::instance().execute(sql);
-    return 0; // Placeholder - should return last_insert_rowid()
+    return 0;
 }
 
 bool UserRepository::update(int id, const models::User& user) {
@@ -81,22 +114,56 @@ bool UserRepository::remove(int id) {
 
 // DeviceRepository implementation
 
+static int deviceCallback(void* data, int argc, char** argv, char** colName) {
+    auto* devices = static_cast<std::vector<models::Device>*>(data);
+    models::Device d;
+    d.id = getIntColumn(colName, argv, argc, "id");
+    d.name = getStrColumn(colName, argv, argc, "name");
+    d.type = getStrColumn(colName, argv, argc, "type");
+    d.ip_address = getStrColumn(colName, argv, argc, "ip_address");
+    d.port = getIntColumn(colName, argv, argc, "port");
+    d.status = getStrColumn(colName, argv, argc, "status");
+    d.model = getStrColumn(colName, argv, argc, "model");
+    d.firmware_version = getStrColumn(colName, argv, argc, "firmware_version");
+    d.created_at = getStrColumn(colName, argv, argc, "created_at");
+    d.updated_at = getStrColumn(colName, argv, argc, "updated_at");
+    devices->push_back(d);
+    return 0;
+}
+
 std::optional<models::Device> DeviceRepository::findById(int id) {
+    std::vector<models::Device> devices;
     std::string sql = "SELECT * FROM devices WHERE id=" + std::to_string(id);
-    return std::nullopt; // Placeholder
+    char* errMsg = nullptr;
+    sqlite3_exec(reinterpret_cast<sqlite3*>(DatabaseManager::instance().db()), sql.c_str(), deviceCallback, &devices, &errMsg);
+    return devices.empty() ? std::nullopt : std::make_optional(devices[0]);
 }
 
 std::vector<models::Device> DeviceRepository::findAll(const std::string& status, const std::string& type, int page, int limit) {
+    std::vector<models::Device> devices;
     std::string sql = "SELECT * FROM devices WHERE 1=1";
     if (!status.empty()) sql += " AND status='" + status + "'";
     if (!type.empty()) sql += " AND type='" + type + "'";
     int offset = (page - 1) * limit;
-    sql += " LIMIT " + std::to_string(limit) + " OFFSET " + std::to_string(offset);
-    return {}; // Placeholder
+    sql += " ORDER BY created_at DESC LIMIT " + std::to_string(limit) + " OFFSET " + std::to_string(offset);
+    char* errMsg = nullptr;
+    sqlite3_exec(reinterpret_cast<sqlite3*>(DatabaseManager::instance().db()), sql.c_str(), deviceCallback, &devices, &errMsg);
+    return devices;
 }
 
 int DeviceRepository::count(const std::string& status, const std::string& type) {
-    return 0; // Placeholder
+    std::string sql = "SELECT COUNT(*) FROM devices WHERE 1=1";
+    if (!status.empty()) sql += " AND status='" + status + "'";
+    if (!type.empty()) sql += " AND type='" + type + "'";
+    
+    int count = 0;
+    auto countCb = [](void* data, int argc, char** argv, char**) -> int {
+        if (argc > 0 && argv[0]) *static_cast<int*>(data) = std::stoi(argv[0]);
+        return 0;
+    };
+    char* errMsg = nullptr;
+    sqlite3_exec(reinterpret_cast<sqlite3*>(DatabaseManager::instance().db()), sql.c_str(), countCb, &count, &errMsg);
+    return count;
 }
 
 int DeviceRepository::create(const models::Device& device) {
@@ -128,16 +195,52 @@ bool DeviceRepository::updateStatus(int id, const std::string& status) {
 
 // TaskRepository implementation
 
+static int taskCallback(void* data, int argc, char** argv, char** colName) {
+    auto* tasks = static_cast<std::vector<models::Task>*>(data);
+    models::Task t;
+    t.id = getIntColumn(colName, argv, argc, "id");
+    t.name = getStrColumn(colName, argv, argc, "name");
+    t.description = getStrColumn(colName, argv, argc, "description");
+    t.device_id = getIntColumn(colName, argv, argc, "device_id");
+    t.graph_config = getStrColumn(colName, argv, argc, "graph_config");
+    t.status = getStrColumn(colName, argv, argc, "status");
+    t.schedule_cron = getStrColumn(colName, argv, argc, "schedule_cron");
+    t.created_at = getStrColumn(colName, argv, argc, "created_at");
+    t.updated_at = getStrColumn(colName, argv, argc, "updated_at");
+    tasks->push_back(t);
+    return 0;
+}
+
 std::optional<models::Task> TaskRepository::findById(int id) {
-    return std::nullopt;
+    std::vector<models::Task> tasks;
+    std::string sql = "SELECT * FROM tasks WHERE id=" + std::to_string(id);
+    char* errMsg = nullptr;
+    sqlite3_exec(reinterpret_cast<sqlite3*>(DatabaseManager::instance().db()), sql.c_str(), taskCallback, &tasks, &errMsg);
+    return tasks.empty() ? std::nullopt : std::make_optional(tasks[0]);
 }
 
 std::vector<models::Task> TaskRepository::findAll(const std::string& status, int page, int limit) {
-    return {};
+    std::vector<models::Task> tasks;
+    std::string sql = "SELECT * FROM tasks WHERE 1=1";
+    if (!status.empty()) sql += " AND status='" + status + "'";
+    int offset = (page - 1) * limit;
+    sql += " ORDER BY created_at DESC LIMIT " + std::to_string(limit) + " OFFSET " + std::to_string(offset);
+    char* errMsg = nullptr;
+    sqlite3_exec(reinterpret_cast<sqlite3*>(DatabaseManager::instance().db()), sql.c_str(), taskCallback, &tasks, &errMsg);
+    return tasks;
 }
 
 int TaskRepository::count(const std::string& status) {
-    return 0;
+    std::string sql = "SELECT COUNT(*) FROM tasks WHERE 1=1";
+    if (!status.empty()) sql += " AND status='" + status + "'";
+    int count = 0;
+    auto countCb = [](void* data, int argc, char** argv, char**) -> int {
+        if (argc > 0 && argv[0]) *static_cast<int*>(data) = std::stoi(argv[0]);
+        return 0;
+    };
+    char* errMsg = nullptr;
+    sqlite3_exec(reinterpret_cast<sqlite3*>(DatabaseManager::instance().db()), sql.c_str(), countCb, &count, &errMsg);
+    return count;
 }
 
 int TaskRepository::create(const models::Task& task) {
@@ -169,22 +272,54 @@ bool TaskRepository::updateStatus(int id, const std::string& status) {
 
 // AlgorithmRepository implementation
 
-std::optional<models::Algorithm> AlgorithmRepository::findById(int id) {
-    return std::nullopt;
-}
-
-std::vector<models::Algorithm> AlgorithmRepository::findAll(int page, int limit) {
-    return {};
-}
-
-int AlgorithmRepository::count() {
+static int algoCallback(void* data, int argc, char** argv, char** colName) {
+    auto* algos = static_cast<std::vector<models::Algorithm>*>(data);
+    models::Algorithm a;
+    a.id = getIntColumn(colName, argv, argc, "id");
+    a.name = getStrColumn(colName, argv, argc, "name");
+    a.version = getStrColumn(colName, argv, argc, "version");
+    a.type = getStrColumn(colName, argv, argc, "type");
+    a.model_path = getStrColumn(colName, argv, argc, "model_path");
+    a.config_schema = getStrColumn(colName, argv, argc, "config_schema");
+    a.plugin_path = getStrColumn(colName, argv, argc, "plugin_path");
+    a.status = getStrColumn(colName, argv, argc, "status");
+    a.created_at = getStrColumn(colName, argv, argc, "created_at");
+    algos->push_back(a);
     return 0;
 }
 
+std::optional<models::Algorithm> AlgorithmRepository::findById(int id) {
+    std::vector<models::Algorithm> algos;
+    std::string sql = "SELECT * FROM algorithms WHERE id=" + std::to_string(id);
+    char* errMsg = nullptr;
+    sqlite3_exec(reinterpret_cast<sqlite3*>(DatabaseManager::instance().db()), sql.c_str(), algoCallback, &algos, &errMsg);
+    return algos.empty() ? std::nullopt : std::make_optional(algos[0]);
+}
+
+std::vector<models::Algorithm> AlgorithmRepository::findAll(int page, int limit) {
+    std::vector<models::Algorithm> algos;
+    int offset = (page - 1) * limit;
+    std::string sql = "SELECT * FROM algorithms ORDER BY created_at DESC LIMIT " + std::to_string(limit) + " OFFSET " + std::to_string(offset);
+    char* errMsg = nullptr;
+    sqlite3_exec(reinterpret_cast<sqlite3*>(DatabaseManager::instance().db()), sql.c_str(), algoCallback, &algos, &errMsg);
+    return algos;
+}
+
+int AlgorithmRepository::count() {
+    int count = 0;
+    auto countCb = [](void* data, int argc, char** argv, char**) -> int {
+        if (argc > 0 && argv[0]) *static_cast<int*>(data) = std::stoi(argv[0]);
+        return 0;
+    };
+    char* errMsg = nullptr;
+    sqlite3_exec(reinterpret_cast<sqlite3*>(DatabaseManager::instance().db()), "SELECT COUNT(*) FROM algorithms", countCb, &count, &errMsg);
+    return count;
+}
+
 int AlgorithmRepository::create(const models::Algorithm& algo) {
-    std::string sql = "INSERT INTO algorithms (name, version, type, model_path, config_schema, plugin_path) VALUES ('" +
+    std::string sql = "INSERT INTO algorithms (name, version, type, model_path, config_schema, plugin_path, status) VALUES ('" +
                       algo.name + "', '" + algo.version + "', '" + algo.type + "', '" +
-                      algo.model_path + "', '" + algo.config_schema + "', '" + algo.plugin_path + "')";
+                      algo.model_path + "', '" + algo.config_schema + "', '" + algo.plugin_path + "', '" + algo.status + "')";
     DatabaseManager::instance().execute(sql);
     return 0;
 }
@@ -192,7 +327,8 @@ int AlgorithmRepository::create(const models::Algorithm& algo) {
 bool AlgorithmRepository::update(int id, const models::Algorithm& algo) {
     std::string sql = "UPDATE algorithms SET name='" + algo.name + "', version='" + algo.version +
                       "', type='" + algo.type + "', model_path='" + algo.model_path +
-                      "', config_schema='" + algo.config_schema + "', plugin_path='" + algo.plugin_path + "' WHERE id=" + std::to_string(id);
+                      "', config_schema='" + algo.config_schema + "', plugin_path='" + algo.plugin_path +
+                      "', status='" + algo.status + "' WHERE id=" + std::to_string(id);
     return DatabaseManager::instance().execute(sql);
 }
 
@@ -202,14 +338,35 @@ bool AlgorithmRepository::remove(int id) {
 
 // AlarmRuleRepository implementation
 
+static int alarmRuleCallback(void* data, int argc, char** argv, char** colName) {
+    auto* rules = static_cast<std::vector<models::AlarmRule>*>(data);
+    models::AlarmRule r;
+    r.id = getIntColumn(colName, argv, argc, "id");
+    r.name = getStrColumn(colName, argv, argc, "name");
+    r.condition_expr = getStrColumn(colName, argv, argc, "condition_expr");
+    r.debounce_seconds = getIntColumn(colName, argv, argc, "debounce_seconds");
+    r.notification_channels = getStrColumn(colName, argv, argc, "notification_channels");
+    r.enabled = getIntColumn(colName, argv, argc, "enabled") != 0;
+    r.created_at = getStrColumn(colName, argv, argc, "created_at");
+    rules->push_back(r);
+    return 0;
+}
+
 std::optional<models::AlarmRule> AlarmRuleRepository::findById(int id) {
-    return std::nullopt;
+    std::vector<models::AlarmRule> rules;
+    std::string sql = "SELECT * FROM alarm_rules WHERE id=" + std::to_string(id);
+    char* errMsg = nullptr;
+    sqlite3_exec(reinterpret_cast<sqlite3*>(DatabaseManager::instance().db()), sql.c_str(), alarmRuleCallback, &rules, &errMsg);
+    return rules.empty() ? std::nullopt : std::make_optional(rules[0]);
 }
 
 std::vector<models::AlarmRule> AlarmRuleRepository::findAll(bool enabledOnly) {
+    std::vector<models::AlarmRule> rules;
     std::string sql = "SELECT * FROM alarm_rules";
     if (enabledOnly) sql += " WHERE enabled=1";
-    return {};
+    char* errMsg = nullptr;
+    sqlite3_exec(reinterpret_cast<sqlite3*>(DatabaseManager::instance().db()), sql.c_str(), alarmRuleCallback, &rules, &errMsg);
+    return rules;
 }
 
 int AlarmRuleRepository::create(const models::AlarmRule& rule) {
@@ -238,16 +395,45 @@ bool AlarmRuleRepository::toggle(int id, bool enabled) {
 
 // AlarmEventRepository implementation
 
+static int alarmEventCallback(void* data, int argc, char** argv, char** colName) {
+    auto* events = static_cast<std::vector<models::AlarmEvent>*>(data);
+    models::AlarmEvent e;
+    e.id = getIntColumn(colName, argv, argc, "id");
+    e.rule_id = getIntColumn(colName, argv, argc, "rule_id");
+    e.task_id = getIntColumn(colName, argv, argc, "task_id");
+    e.evidence_path = getStrColumn(colName, argv, argc, "evidence_path");
+    e.context = getStrColumn(colName, argv, argc, "context");
+    e.triggered_at = getStrColumn(colName, argv, argc, "triggered_at");
+    events->push_back(e);
+    return 0;
+}
+
 std::optional<models::AlarmEvent> AlarmEventRepository::findById(int id) {
-    return std::nullopt;
+    std::vector<models::AlarmEvent> events;
+    std::string sql = "SELECT * FROM alarm_events WHERE id=" + std::to_string(id);
+    char* errMsg = nullptr;
+    sqlite3_exec(reinterpret_cast<sqlite3*>(DatabaseManager::instance().db()), sql.c_str(), alarmEventCallback, &events, &errMsg);
+    return events.empty() ? std::nullopt : std::make_optional(events[0]);
 }
 
 std::vector<models::AlarmEvent> AlarmEventRepository::findAll(int page, int limit) {
-    return {};
+    std::vector<models::AlarmEvent> events;
+    int offset = (page - 1) * limit;
+    std::string sql = "SELECT * FROM alarm_events ORDER BY triggered_at DESC LIMIT " + std::to_string(limit) + " OFFSET " + std::to_string(offset);
+    char* errMsg = nullptr;
+    sqlite3_exec(reinterpret_cast<sqlite3*>(DatabaseManager::instance().db()), sql.c_str(), alarmEventCallback, &events, &errMsg);
+    return events;
 }
 
 int AlarmEventRepository::count() {
-    return 0;
+    int count = 0;
+    auto countCb = [](void* data, int argc, char** argv, char**) -> int {
+        if (argc > 0 && argv[0]) *static_cast<int*>(data) = std::stoi(argv[0]);
+        return 0;
+    };
+    char* errMsg = nullptr;
+    sqlite3_exec(reinterpret_cast<sqlite3*>(DatabaseManager::instance().db()), "SELECT COUNT(*) FROM alarm_events", countCb, &count, &errMsg);
+    return count;
 }
 
 int AlarmEventRepository::create(const models::AlarmEvent& event) {
@@ -261,6 +447,17 @@ int AlarmEventRepository::create(const models::AlarmEvent& event) {
 
 // MonitoringMetricRepository implementation
 
+static int metricCallback(void* data, int argc, char** argv, char** colName) {
+    auto* metrics = static_cast<std::vector<models::MonitoringMetric>*>(data);
+    models::MonitoringMetric m;
+    m.id = getIntColumn(colName, argv, argc, "id");
+    m.metric_type = getStrColumn(colName, argv, argc, "metric_type");
+    m.value = getDoubleColumn(colName, argv, argc, "value");
+    m.recorded_at = getStrColumn(colName, argv, argc, "recorded_at");
+    metrics->push_back(m);
+    return 0;
+}
+
 int MonitoringMetricRepository::create(const models::MonitoringMetric& metric) {
     std::string now = currentTimestamp();
     std::string sql = "INSERT INTO monitoring_metrics (metric_type, value, recorded_at) VALUES ('" +
@@ -270,7 +467,14 @@ int MonitoringMetricRepository::create(const models::MonitoringMetric& metric) {
 }
 
 std::vector<models::MonitoringMetric> MonitoringMetricRepository::findByType(const std::string& type, const std::string& startTime, const std::string& endTime) {
-    return {};
+    std::vector<models::MonitoringMetric> metrics;
+    std::string sql = "SELECT * FROM monitoring_metrics WHERE metric_type='" + type + "'";
+    if (!startTime.empty()) sql += " AND recorded_at >= '" + startTime + "'";
+    if (!endTime.empty()) sql += " AND recorded_at <= '" + endTime + "'";
+    sql += " ORDER BY recorded_at DESC LIMIT 100";
+    char* errMsg = nullptr;
+    sqlite3_exec(reinterpret_cast<sqlite3*>(DatabaseManager::instance().db()), sql.c_str(), metricCallback, &metrics, &errMsg);
+    return metrics;
 }
 
 bool MonitoringMetricRepository::cleanOldMetrics(int daysToKeep) {
@@ -280,12 +484,32 @@ bool MonitoringMetricRepository::cleanOldMetrics(int daysToKeep) {
 
 // ConfigVersionRepository implementation
 
+static int configCallback(void* data, int argc, char** argv, char** colName) {
+    auto* configs = static_cast<std::vector<models::ConfigVersion>*>(data);
+    models::ConfigVersion c;
+    c.id = getIntColumn(colName, argv, argc, "id");
+    c.config_key = getStrColumn(colName, argv, argc, "config_key");
+    c.config_value = getStrColumn(colName, argv, argc, "config_value");
+    c.version = getIntColumn(colName, argv, argc, "version");
+    c.created_at = getStrColumn(colName, argv, argc, "created_at");
+    configs->push_back(c);
+    return 0;
+}
+
 std::optional<models::ConfigVersion> ConfigVersionRepository::findLatest(const std::string& key) {
-    return std::nullopt;
+    std::vector<models::ConfigVersion> configs;
+    std::string sql = "SELECT * FROM config_versions WHERE config_key='" + key + "' ORDER BY version DESC LIMIT 1";
+    char* errMsg = nullptr;
+    sqlite3_exec(reinterpret_cast<sqlite3*>(DatabaseManager::instance().db()), sql.c_str(), configCallback, &configs, &errMsg);
+    return configs.empty() ? std::nullopt : std::make_optional(configs[0]);
 }
 
 std::vector<models::ConfigVersion> ConfigVersionRepository::findHistory(const std::string& key, int limit) {
-    return {};
+    std::vector<models::ConfigVersion> configs;
+    std::string sql = "SELECT * FROM config_versions WHERE config_key='" + key + "' ORDER BY version DESC LIMIT " + std::to_string(limit);
+    char* errMsg = nullptr;
+    sqlite3_exec(reinterpret_cast<sqlite3*>(DatabaseManager::instance().db()), sql.c_str(), configCallback, &configs, &errMsg);
+    return configs;
 }
 
 int ConfigVersionRepository::create(const std::string& key, const std::string& value) {
@@ -296,21 +520,61 @@ int ConfigVersionRepository::create(const std::string& key, const std::string& v
 }
 
 bool ConfigVersionRepository::rollback(const std::string& key, int version) {
-    return false; // Placeholder
+    auto opt = findLatest(key);
+    if (!opt) return false;
+    
+    std::string sql = "SELECT config_value FROM config_versions WHERE config_key='" + key + "' AND version=" + std::to_string(version);
+    std::string value;
+    auto valueCb = [](void* data, int argc, char** argv, char**) -> int {
+        if (argc > 0 && argv[0]) *static_cast<std::string*>(data) = argv[0];
+        return 0;
+    };
+    char* errMsg = nullptr;
+    sqlite3_exec(reinterpret_cast<sqlite3*>(DatabaseManager::instance().db()), sql.c_str(), valueCb, &value, &errMsg);
+    
+    if (value.empty()) return false;
+    return create(key, value);
 }
 
 // PluginRepository implementation
 
+static int pluginCallback(void* data, int argc, char** argv, char** colName) {
+    auto* plugins = static_cast<std::vector<models::Plugin>*>(data);
+    models::Plugin p;
+    p.id = getIntColumn(colName, argv, argc, "id");
+    p.name = getStrColumn(colName, argv, argc, "name");
+    p.version = getStrColumn(colName, argv, argc, "version");
+    p.path = getStrColumn(colName, argv, argc, "path");
+    p.signature = getStrColumn(colName, argv, argc, "signature");
+    p.status = getStrColumn(colName, argv, argc, "status");
+    p.created_at = getStrColumn(colName, argv, argc, "created_at");
+    plugins->push_back(p);
+    return 0;
+}
+
 std::optional<models::Plugin> PluginRepository::findById(int id) {
-    return std::nullopt;
+    std::vector<models::Plugin> plugins;
+    std::string sql = "SELECT * FROM plugins WHERE id=" + std::to_string(id);
+    char* errMsg = nullptr;
+    sqlite3_exec(reinterpret_cast<sqlite3*>(DatabaseManager::instance().db()), sql.c_str(), pluginCallback, &plugins, &errMsg);
+    return plugins.empty() ? std::nullopt : std::make_optional(plugins[0]);
 }
 
 std::optional<models::Plugin> PluginRepository::findByName(const std::string& name) {
-    return std::nullopt;
+    std::vector<models::Plugin> plugins;
+    std::string sql = "SELECT * FROM plugins WHERE name='" + name + "'";
+    char* errMsg = nullptr;
+    sqlite3_exec(reinterpret_cast<sqlite3*>(DatabaseManager::instance().db()), sql.c_str(), pluginCallback, &plugins, &errMsg);
+    return plugins.empty() ? std::nullopt : std::make_optional(plugins[0]);
 }
 
 std::vector<models::Plugin> PluginRepository::findAll(const std::string& status) {
-    return {};
+    std::vector<models::Plugin> plugins;
+    std::string sql = "SELECT * FROM plugins";
+    if (!status.empty()) sql += " WHERE status='" + status + "'";
+    char* errMsg = nullptr;
+    sqlite3_exec(reinterpret_cast<sqlite3*>(DatabaseManager::instance().db()), sql.c_str(), pluginCallback, &plugins, &errMsg);
+    return plugins;
 }
 
 int PluginRepository::create(const models::Plugin& plugin) {
@@ -334,12 +598,35 @@ bool PluginRepository::remove(int id) {
 
 // UpgradeRecordRepository implementation
 
+static int upgradeCallback(void* data, int argc, char** argv, char** colName) {
+    auto* records = static_cast<std::vector<models::UpgradeRecord>*>(data);
+    models::UpgradeRecord r;
+    r.id = getIntColumn(colName, argv, argc, "id");
+    r.target_version = getStrColumn(colName, argv, argc, "target_version");
+    r.type = getStrColumn(colName, argv, argc, "type");
+    r.status = getStrColumn(colName, argv, argc, "status");
+    r.rollback_version = getStrColumn(colName, argv, argc, "rollback_version");
+    r.started_at = getStrColumn(colName, argv, argc, "started_at");
+    r.completed_at = getStrColumn(colName, argv, argc, "completed_at");
+    records->push_back(r);
+    return 0;
+}
+
 std::optional<models::UpgradeRecord> UpgradeRecordRepository::findById(int id) {
-    return std::nullopt;
+    std::vector<models::UpgradeRecord> records;
+    std::string sql = "SELECT * FROM upgrade_records WHERE id=" + std::to_string(id);
+    char* errMsg = nullptr;
+    sqlite3_exec(reinterpret_cast<sqlite3*>(DatabaseManager::instance().db()), sql.c_str(), upgradeCallback, &records, &errMsg);
+    return records.empty() ? std::nullopt : std::make_optional(records[0]);
 }
 
 std::vector<models::UpgradeRecord> UpgradeRecordRepository::findAll(int page, int limit) {
-    return {};
+    std::vector<models::UpgradeRecord> records;
+    int offset = (page - 1) * limit;
+    std::string sql = "SELECT * FROM upgrade_records ORDER BY started_at DESC LIMIT " + std::to_string(limit) + " OFFSET " + std::to_string(offset);
+    char* errMsg = nullptr;
+    sqlite3_exec(reinterpret_cast<sqlite3*>(DatabaseManager::instance().db()), sql.c_str(), upgradeCallback, &records, &errMsg);
+    return records;
 }
 
 int UpgradeRecordRepository::create(const models::UpgradeRecord& record) {

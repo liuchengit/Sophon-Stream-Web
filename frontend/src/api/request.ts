@@ -22,7 +22,12 @@ service.interceptors.request.use(
 
 service.interceptors.response.use(
   (response: AxiosResponse) => {
-    return response.data
+    const res = response.data
+    if (res.code !== 0 && res.code !== undefined) {
+      ElMessage.error(res.message || '请求失败')
+      return Promise.reject(new Error(res.message || '请求失败'))
+    }
+    return res.data !== undefined ? res.data : res
   },
   (error) => {
     if (error.response) {

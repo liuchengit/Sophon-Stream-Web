@@ -1,12 +1,17 @@
 #include "controllers/MonitoringController.h"
-#include "types.h"
-#include <utils/json_converter.h>
+#include "db/repositories.h"
+#include "utils/api_helper.h"
+#include "utils/json_converter.h"
+#include "models/entities.h"
+#include <drogon/HttpAppFramework.h>
+#include <json/json.h>
+#include <nlohmann/json.hpp>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 
-using json = nlohmann::json;
+using namespace sophon::web;
 
-// Read CPU usage from /proc/stat
 static double getCpuUsage() {
     std::ifstream stat("/proc/stat");
     if (!stat.is_open()) return 0.0;
@@ -15,10 +20,9 @@ static double getCpuUsage() {
     std::getline(stat, line);
     stat.close();
 
-    // Parse: cpu  user nice system idle iowait irq softirq steal guest guest_nice
     std::istringstream iss(line);
     std::string label;
-    iss >> label; // "cpu"
+    iss >> label;
 
     long long user, nice, system, idle, iowait, irq, softirq, steal;
     iss >> user >> nice >> system >> idle >> iowait >> irq >> softirq >> steal;
@@ -30,7 +34,6 @@ static double getCpuUsage() {
     return (1.0 - (double)totalIdle / total) * 100.0;
 }
 
-// Read memory usage from /proc/meminfo
 static double getMemoryUsage() {
     std::ifstream meminfo("/proc/meminfo");
     if (!meminfo.is_open()) return 0.0;
@@ -60,37 +63,53 @@ void MonitoringController::asyncHandleHttpRequest(const HttpRequestPtr& req,
     if (path == "/api/v1/monitoring/resources") {
         double cpuUsage = getCpuUsage();
         double memoryUsage = getMemoryUsage();
-
-        // TPU usage simulation (in production, read from BM interface)
         double tpuUsage = 0.0;
 
-        json response = {
-            {"code", 0},
-            {"message", "success"},
-            {"data", {
-                {"tpu_usage", tpuUsage},
-                {"cpu_usage", cpuUsage},
-                {"memory_usage", memoryUsage},
-                {"memory_total", 8192},
-                {"memory_used", static_cast<int>(8192 * memoryUsage / 100)},
-            }}
-        };
-        auto resp = HttpResponse::newHttpJsonResponse(toCppJson(response));
-        callback(resp);
+        nlohmann::json j;
+        j["cpu_usage"] = cpuUsage;
+        j["memory_usage"] = memoryUsage;
+        j["memory_total"] = 8192;
+        j["memory_used"] = static_cast<int>(8192 * memoryUsage / 100);
+        j["tpu_usage"] = tpuUsage;
+
+        callback(successResponse(toCppJson(j)));
 
     } else if (path == "/api/v1/monitoring/history") {
-        json response = {
-            {"code", 0},
-            {"message", "success"},
-            {"data", json::array()}
-        };
-        auto resp = HttpResponse::newHttpJsonResponse(toCppJson(response));
-        callback(resp);
+        auto type = getQueryParam(req, "type", "cpu");
+        auto startTime = getQueryParam(req, "startTime");
+        auto endTime = getQueryParam(req, "endTime");
+
+        auto metrics = db::MonitoringMetricRepository::findByType(type, startTime, endTime);
+
+        nlohmann::json jArr = nlohmann::json::array();
+        for (const auto& metric : metrics) {
+            nlohmann::json j;
+            j["id"] = metric.id;
+            j["metric_type"] = metric.metric_type;
+            j["value"] = metric.value;
+            j["recorded_at"] = metric.recorded_at;
+            jArr.push_back(j);
+        }
+
+        callback(successResponse(toCppJson(jArr)));
+
+    } else if (path == "/api/v1/monitoring/stats") {
+        int onlineDevices = db::DeviceRepository::count("online", "");
+        int offlineDevices = db::DeviceRepository::count("offline", "");
+        int runningTasks = db::TaskRepository::count("running");
+        int stoppedTasks = db::TaskRepository::count("stopped");
+        int alarmCount = db::AlarmEventRepository::count();
+
+        nlohmann::json j;
+        j["online_devices"] = onlineDevices;
+        j["offline_devices"] = offlineDevices;
+        j["running_tasks"] = runningTasks;
+        j["stopped_tasks"] = stoppedTasks;
+        j["alarm_count"] = alarmCount;
+
+        callback(successResponse(toCppJson(j)));
 
     } else {
-        json error = {{"code", 404}, {"message", "Not found"}};
-        auto resp = HttpResponse::newHttpJsonResponse(toCppJson(error));
-        resp->setStatusCode(k404NotFound);
-        callback(resp);
+        callback(errorResponse(404, "Not found", k404NotFound));
     }
 }

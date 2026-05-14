@@ -7,7 +7,7 @@
     ],
     "db_clients": [],
     "app": {
-        "document_root": "./www",
+        "document_root": "/workspace/build/backend/www",
         "home_page": "index.html",
         "upload_path": "./uploads",
         "file_types": [

@@ -20,6 +20,7 @@ public:
     bool restore(const std::string& backupPath);
 
     void close();
+    void* db() const { return db_; }
 
 private:
     DatabaseManager() = default;
