@@ -55,6 +55,16 @@ const routes: RouteRecordRaw[] = [
         name: 'Settings',
         component: () => import('../views/settings/SystemSettings.vue'),
       },
+      {
+        path: 'workflow',
+        name: 'WorkflowList',
+        component: () => import('../views/WorkflowList.vue'),
+      },
+      {
+        path: 'workflow/:id',
+        name: 'WorkflowEditor',
+        component: () => import('../views/WorkflowEditor.vue'),
+      },
     ],
   },
 ]

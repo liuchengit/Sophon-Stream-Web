@@ -138,6 +138,38 @@ CREATE TABLE IF NOT EXISTS upgrade_records (
     completed_at DATETIME
 );
 
+CREATE TABLE IF NOT EXISTS workflows (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name VARCHAR(200) NOT NULL,
+    description TEXT DEFAULT '',
+    status VARCHAR(20) NOT NULL DEFAULT 'draft',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS workflow_nodes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    workflow_id INTEGER NOT NULL,
+    node_id VARCHAR(100) NOT NULL,
+    node_type VARCHAR(50) NOT NULL,
+    position_x REAL NOT NULL DEFAULT 0,
+    position_y REAL NOT NULL DEFAULT 0,
+    config_json TEXT DEFAULT '{}',
+    label VARCHAR(200) DEFAULT '',
+    FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS workflow_edges (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    workflow_id INTEGER NOT NULL,
+    edge_id VARCHAR(100) NOT NULL,
+    source_node VARCHAR(100) NOT NULL,
+    target_node VARCHAR(100) NOT NULL,
+    source_handle VARCHAR(50) DEFAULT 'default',
+    target_handle VARCHAR(50) DEFAULT 'default',
+    FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE
+);
+
 -- Seed data is inserted separately via seedDefaultData()
 )";
 
@@ -320,6 +352,12 @@ bool DatabaseManager::execute(const std::string& sql) {
         return false;
     }
     return true;
+}
+
+int DatabaseManager::lastInsertRowId() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!initialized_ || !db_) return 0;
+    return static_cast<int>(sqlite3_last_insert_rowid(reinterpret_cast<sqlite3*>(db_)));
 }
 
 std::string DatabaseManager::query(const std::string& sql) {

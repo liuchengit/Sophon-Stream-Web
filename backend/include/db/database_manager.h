@@ -14,6 +14,7 @@ public:
 
     bool initialize(const std::string& dbPath = "data/sophon-web.db");
     bool execute(const std::string& sql);
+    int lastInsertRowId();
     std::string query(const std::string& sql);
 
     bool backup(const std::string& backupPath);

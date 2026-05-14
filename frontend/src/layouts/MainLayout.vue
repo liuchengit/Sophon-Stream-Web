@@ -27,6 +27,10 @@
           <el-icon><Cpu /></el-icon>
           <span>算法管理</span>
         </el-menu-item>
+        <el-menu-item index="/workflow">
+          <el-icon><Connection /></el-icon>
+          <span>工作流编辑器</span>
+        </el-menu-item>
         <el-menu-item index="/monitoring">
           <el-icon><TrendCharts /></el-icon>
           <span>监控告警</span>
@@ -76,6 +80,7 @@ import {
   Monitor,
   VideoCamera,
   Cpu,
+  Connection,
   TrendCharts,
   Warning,
   Setting,

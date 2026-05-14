@@ -97,6 +97,7 @@ int UserRepository::create(const models::User& user) {
                       user.username + "', '" + user.password_hash + "', '" + user.email + "', " +
                       std::to_string(user.role_id) + ", '" + now + "', '" + now + "')";
     DatabaseManager::instance().execute(sql);
+    return DatabaseManager::instance().lastInsertRowId();
     return 0;
 }
 
@@ -105,11 +106,13 @@ bool UserRepository::update(int id, const models::User& user) {
     std::string sql = "UPDATE users SET username='" + user.username + "', email='" + user.email +
                       "', role_id=" + std::to_string(user.role_id) + ", updated_at='" + now + "' WHERE id=" + std::to_string(id);
     return DatabaseManager::instance().execute(sql);
+    return DatabaseManager::instance().lastInsertRowId();
 }
 
 bool UserRepository::remove(int id) {
     std::string sql = "DELETE FROM users WHERE id=" + std::to_string(id);
     return DatabaseManager::instance().execute(sql);
+    return DatabaseManager::instance().lastInsertRowId();
 }
 
 // DeviceRepository implementation
@@ -173,6 +176,7 @@ int DeviceRepository::create(const models::Device& device) {
                       std::to_string(device.port) + ", '" + device.status + "', '" + device.model + "', '" +
                       device.firmware_version + "', '" + now + "', '" + now + "')";
     DatabaseManager::instance().execute(sql);
+    return DatabaseManager::instance().lastInsertRowId();
     return 0;
 }
 
@@ -183,6 +187,7 @@ bool DeviceRepository::update(int id, const models::Device& device) {
                       ", status='" + device.status + "', model='" + device.model +
                       "', firmware_version='" + device.firmware_version + "', updated_at='" + now + "' WHERE id=" + std::to_string(id);
     return DatabaseManager::instance().execute(sql);
+    return DatabaseManager::instance().lastInsertRowId();
 }
 
 bool DeviceRepository::remove(int id) {
@@ -250,6 +255,7 @@ int TaskRepository::create(const models::Task& task) {
                       ", '" + task.graph_config + "', '" + task.status + "', '" + task.schedule_cron +
                       "', '" + now + "', '" + now + "')";
     DatabaseManager::instance().execute(sql);
+    return DatabaseManager::instance().lastInsertRowId();
     return 0;
 }
 
@@ -260,6 +266,7 @@ bool TaskRepository::update(int id, const models::Task& task) {
                       ", graph_config='" + task.graph_config + "', status='" + task.status +
                       "', schedule_cron='" + task.schedule_cron + "', updated_at='" + now + "' WHERE id=" + std::to_string(id);
     return DatabaseManager::instance().execute(sql);
+    return DatabaseManager::instance().lastInsertRowId();
 }
 
 bool TaskRepository::remove(int id) {
@@ -321,6 +328,7 @@ int AlgorithmRepository::create(const models::Algorithm& algo) {
                       algo.name + "', '" + algo.version + "', '" + algo.type + "', '" +
                       algo.model_path + "', '" + algo.config_schema + "', '" + algo.plugin_path + "', '" + algo.status + "')";
     DatabaseManager::instance().execute(sql);
+    return DatabaseManager::instance().lastInsertRowId();
     return 0;
 }
 
@@ -330,6 +338,7 @@ bool AlgorithmRepository::update(int id, const models::Algorithm& algo) {
                       "', config_schema='" + algo.config_schema + "', plugin_path='" + algo.plugin_path +
                       "', status='" + algo.status + "' WHERE id=" + std::to_string(id);
     return DatabaseManager::instance().execute(sql);
+    return DatabaseManager::instance().lastInsertRowId();
 }
 
 bool AlgorithmRepository::remove(int id) {
@@ -374,6 +383,7 @@ int AlarmRuleRepository::create(const models::AlarmRule& rule) {
                       rule.name + "', '" + rule.condition_expr + "', " + std::to_string(rule.debounce_seconds) +
                       ", '" + rule.notification_channels + "', " + (rule.enabled ? "1" : "0") + ")";
     DatabaseManager::instance().execute(sql);
+    return DatabaseManager::instance().lastInsertRowId();
     return 0;
 }
 
@@ -383,6 +393,7 @@ bool AlarmRuleRepository::update(int id, const models::AlarmRule& rule) {
                       ", notification_channels='" + rule.notification_channels +
                       "', enabled=" + (rule.enabled ? "1" : "0") + " WHERE id=" + std::to_string(id);
     return DatabaseManager::instance().execute(sql);
+    return DatabaseManager::instance().lastInsertRowId();
 }
 
 bool AlarmRuleRepository::remove(int id) {
@@ -442,6 +453,7 @@ int AlarmEventRepository::create(const models::AlarmEvent& event) {
                       std::to_string(event.rule_id) + ", " + std::to_string(event.task_id) +
                       ", '" + event.evidence_path + "', '" + event.context + "', '" + now + "')";
     DatabaseManager::instance().execute(sql);
+    return DatabaseManager::instance().lastInsertRowId();
     return 0;
 }
 
@@ -463,6 +475,7 @@ int MonitoringMetricRepository::create(const models::MonitoringMetric& metric) {
     std::string sql = "INSERT INTO monitoring_metrics (metric_type, value, recorded_at) VALUES ('" +
                       metric.metric_type + "', " + std::to_string(metric.value) + ", '" + now + "')";
     DatabaseManager::instance().execute(sql);
+    return DatabaseManager::instance().lastInsertRowId();
     return 0;
 }
 
@@ -480,6 +493,7 @@ std::vector<models::MonitoringMetric> MonitoringMetricRepository::findByType(con
 bool MonitoringMetricRepository::cleanOldMetrics(int daysToKeep) {
     std::string sql = "DELETE FROM monitoring_metrics WHERE recorded_at < datetime('now', '-" + std::to_string(daysToKeep) + " days')";
     return DatabaseManager::instance().execute(sql);
+    return DatabaseManager::instance().lastInsertRowId();
 }
 
 // ConfigVersionRepository implementation
@@ -516,6 +530,7 @@ int ConfigVersionRepository::create(const std::string& key, const std::string& v
     std::string sql = "INSERT INTO config_versions (config_key, config_value, version) VALUES ('" +
                       key + "', '" + value + "', (SELECT COALESCE(MAX(version), 0) + 1 FROM config_versions WHERE config_key='" + key + "'))";
     DatabaseManager::instance().execute(sql);
+    return DatabaseManager::instance().lastInsertRowId();
     return 0;
 }
 
@@ -582,6 +597,7 @@ int PluginRepository::create(const models::Plugin& plugin) {
                       plugin.name + "', '" + plugin.version + "', '" + plugin.path + "', '" +
                       plugin.signature + "', '" + plugin.status + "')";
     DatabaseManager::instance().execute(sql);
+    return DatabaseManager::instance().lastInsertRowId();
     return 0;
 }
 
@@ -590,6 +606,7 @@ bool PluginRepository::update(int id, const models::Plugin& plugin) {
                       "', path='" + plugin.path + "', signature='" + plugin.signature +
                       "', status='" + plugin.status + "' WHERE id=" + std::to_string(id);
     return DatabaseManager::instance().execute(sql);
+    return DatabaseManager::instance().lastInsertRowId();
 }
 
 bool PluginRepository::remove(int id) {
@@ -635,6 +652,7 @@ int UpgradeRecordRepository::create(const models::UpgradeRecord& record) {
                       record.target_version + "', '" + record.type + "', '" + record.status + "', '" +
                       record.rollback_version + "', '" + now + "')";
     DatabaseManager::instance().execute(sql);
+    return DatabaseManager::instance().lastInsertRowId();
     return 0;
 }
 
@@ -644,6 +662,167 @@ bool UpgradeRecordRepository::update(int id, const models::UpgradeRecord& record
                       "', type='" + record.type + "', status='" + record.status +
                       "', rollback_version='" + record.rollback_version +
                       "', completed_at='" + now + "' WHERE id=" + std::to_string(id);
+    return DatabaseManager::instance().execute(sql);
+    return DatabaseManager::instance().lastInsertRowId();
+}
+
+// WorkflowRepository implementation
+
+static int workflowCallback(void* data, int argc, char** argv, char** colName) {
+    auto* workflows = static_cast<std::vector<models::Workflow>*>(data);
+    models::Workflow w;
+    w.id = getIntColumn(colName, argv, argc, "id");
+    w.name = getStrColumn(colName, argv, argc, "name");
+    w.description = getStrColumn(colName, argv, argc, "description");
+    w.status = getStrColumn(colName, argv, argc, "status");
+    w.created_at = getStrColumn(colName, argv, argc, "created_at");
+    w.updated_at = getStrColumn(colName, argv, argc, "updated_at");
+    workflows->push_back(w);
+    return 0;
+}
+
+std::optional<models::Workflow> WorkflowRepository::findById(int id) {
+    std::vector<models::Workflow> workflows;
+    std::string sql = "SELECT * FROM workflows WHERE id=" + std::to_string(id);
+    char* errMsg = nullptr;
+    sqlite3_exec(reinterpret_cast<sqlite3*>(DatabaseManager::instance().db()), sql.c_str(), workflowCallback, &workflows, &errMsg);
+    return workflows.empty() ? std::nullopt : std::make_optional(workflows[0]);
+}
+
+std::vector<models::Workflow> WorkflowRepository::findAll(const std::string& status, int page, int limit) {
+    std::vector<models::Workflow> workflows;
+    std::string sql = "SELECT * FROM workflows";
+    if (!status.empty()) sql += " WHERE status='" + status + "'";
+    int offset = (page - 1) * limit;
+    sql += " ORDER BY updated_at DESC LIMIT " + std::to_string(limit) + " OFFSET " + std::to_string(offset);
+    char* errMsg = nullptr;
+    sqlite3_exec(reinterpret_cast<sqlite3*>(DatabaseManager::instance().db()), sql.c_str(), workflowCallback, &workflows, &errMsg);
+    return workflows;
+}
+
+int WorkflowRepository::count(const std::string& status) {
+    std::string sql = "SELECT COUNT(*) FROM workflows";
+    if (!status.empty()) sql += " WHERE status='" + status + "'";
+    int count = 0;
+    auto cb = [](void* data, int argc, char** argv, char**) -> int {
+        if (argc > 0 && argv[0]) *static_cast<int*>(data) = std::atoi(argv[0]);
+        return 0;
+    };
+    char* errMsg = nullptr;
+    sqlite3_exec(reinterpret_cast<sqlite3*>(DatabaseManager::instance().db()), sql.c_str(), cb, &count, &errMsg);
+    return count;
+}
+
+int WorkflowRepository::create(const models::Workflow& workflow) {
+    std::string now = currentTimestamp();
+    std::string sql = "INSERT INTO workflows (name, description, status, updated_at) VALUES ('" +
+                      workflow.name + "', '" + workflow.description + "', '" + workflow.status + "', '" + now + "')";
+    DatabaseManager::instance().execute(sql);
+    return DatabaseManager::instance().lastInsertRowId();
+}
+
+bool WorkflowRepository::update(int id, const models::Workflow& workflow) {
+    std::string now = currentTimestamp();
+    std::string sql = "UPDATE workflows SET name='" + workflow.name +
+                      "', description='" + workflow.description +
+                      "', status='" + workflow.status +
+                      "', updated_at='" + now + "' WHERE id=" + std::to_string(id);
+    return DatabaseManager::instance().execute(sql);
+}
+
+bool WorkflowRepository::remove(int id) {
+    std::string sql = "DELETE FROM workflows WHERE id=" + std::to_string(id);
+    return DatabaseManager::instance().execute(sql);
+}
+
+bool WorkflowRepository::updateStatus(int id, const std::string& status) {
+    std::string now = currentTimestamp();
+    std::string sql = "UPDATE workflows SET status='" + status + "', updated_at='" + now + "' WHERE id=" + std::to_string(id);
+    return DatabaseManager::instance().execute(sql);
+}
+
+// WorkflowNodeRepository implementation
+
+static int workflowNodeCallback(void* data, int argc, char** argv, char** colName) {
+    auto* nodes = static_cast<std::vector<models::WorkflowNode>*>(data);
+    models::WorkflowNode n;
+    n.id = getIntColumn(colName, argv, argc, "id");
+    n.workflow_id = getIntColumn(colName, argv, argc, "workflow_id");
+    n.node_id = getStrColumn(colName, argv, argc, "node_id");
+    n.node_type = getStrColumn(colName, argv, argc, "node_type");
+    n.position_x = getDoubleColumn(colName, argv, argc, "position_x");
+    n.position_y = getDoubleColumn(colName, argv, argc, "position_y");
+    n.config_json = getStrColumn(colName, argv, argc, "config_json");
+    n.label = getStrColumn(colName, argv, argc, "label");
+    nodes->push_back(n);
+    return 0;
+}
+
+std::vector<models::WorkflowNode> WorkflowNodeRepository::findByWorkflowId(int workflowId) {
+    std::vector<models::WorkflowNode> nodes;
+    std::string sql = "SELECT * FROM workflow_nodes WHERE workflow_id=" + std::to_string(workflowId);
+    char* errMsg = nullptr;
+    sqlite3_exec(reinterpret_cast<sqlite3*>(DatabaseManager::instance().db()), sql.c_str(), workflowNodeCallback, &nodes, &errMsg);
+    return nodes;
+}
+
+int WorkflowNodeRepository::create(const models::WorkflowNode& node) {
+    std::string sql = "INSERT INTO workflow_nodes (workflow_id, node_id, node_type, position_x, position_y, config_json, label) VALUES (" +
+                      std::to_string(node.workflow_id) + ", '" + node.node_id + "', '" + node.node_type + "', " +
+                      std::to_string(node.position_x) + ", " + std::to_string(node.position_y) + ", '" +
+                      node.config_json + "', '" + node.label + "')";
+    DatabaseManager::instance().execute(sql);
+    return DatabaseManager::instance().lastInsertRowId();
+}
+
+bool WorkflowNodeRepository::update(int workflowId, const std::string& nodeId, const models::WorkflowNode& node) {
+    std::string sql = "UPDATE workflow_nodes SET position_x=" + std::to_string(node.position_x) +
+                      ", position_y=" + std::to_string(node.position_y) +
+                      ", config_json='" + node.config_json +
+                      "', label='" + node.label +
+                      "' WHERE workflow_id=" + std::to_string(workflowId) + " AND node_id='" + nodeId + "'";
+    return DatabaseManager::instance().execute(sql);
+}
+
+bool WorkflowNodeRepository::removeByWorkflowId(int workflowId) {
+    std::string sql = "DELETE FROM workflow_nodes WHERE workflow_id=" + std::to_string(workflowId);
+    return DatabaseManager::instance().execute(sql);
+}
+
+// WorkflowEdgeRepository implementation
+
+static int workflowEdgeCallback(void* data, int argc, char** argv, char** colName) {
+    auto* edges = static_cast<std::vector<models::WorkflowEdge>*>(data);
+    models::WorkflowEdge e;
+    e.id = getIntColumn(colName, argv, argc, "id");
+    e.workflow_id = getIntColumn(colName, argv, argc, "workflow_id");
+    e.edge_id = getStrColumn(colName, argv, argc, "edge_id");
+    e.source_node = getStrColumn(colName, argv, argc, "source_node");
+    e.target_node = getStrColumn(colName, argv, argc, "target_node");
+    e.source_handle = getStrColumn(colName, argv, argc, "source_handle");
+    e.target_handle = getStrColumn(colName, argv, argc, "target_handle");
+    edges->push_back(e);
+    return 0;
+}
+
+std::vector<models::WorkflowEdge> WorkflowEdgeRepository::findByWorkflowId(int workflowId) {
+    std::vector<models::WorkflowEdge> edges;
+    std::string sql = "SELECT * FROM workflow_edges WHERE workflow_id=" + std::to_string(workflowId);
+    char* errMsg = nullptr;
+    sqlite3_exec(reinterpret_cast<sqlite3*>(DatabaseManager::instance().db()), sql.c_str(), workflowEdgeCallback, &edges, &errMsg);
+    return edges;
+}
+
+int WorkflowEdgeRepository::create(const models::WorkflowEdge& edge) {
+    std::string sql = "INSERT INTO workflow_edges (workflow_id, edge_id, source_node, target_node, source_handle, target_handle) VALUES (" +
+                      std::to_string(edge.workflow_id) + ", '" + edge.edge_id + "', '" + edge.source_node + "', '" +
+                      edge.target_node + "', '" + edge.source_handle + "', '" + edge.target_handle + "')";
+    DatabaseManager::instance().execute(sql);
+    return DatabaseManager::instance().lastInsertRowId();
+}
+
+bool WorkflowEdgeRepository::removeByWorkflowId(int workflowId) {
+    std::string sql = "DELETE FROM workflow_edges WHERE workflow_id=" + std::to_string(workflowId);
     return DatabaseManager::instance().execute(sql);
 }
 

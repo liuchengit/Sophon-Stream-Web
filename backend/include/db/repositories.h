@@ -102,6 +102,32 @@ public:
     static bool update(int id, const models::UpgradeRecord& record);
 };
 
+class WorkflowRepository {
+public:
+    static std::optional<models::Workflow> findById(int id);
+    static std::vector<models::Workflow> findAll(const std::string& status = "", int page = 1, int limit = 20);
+    static int count(const std::string& status = "");
+    static int create(const models::Workflow& workflow);
+    static bool update(int id, const models::Workflow& workflow);
+    static bool remove(int id);
+    static bool updateStatus(int id, const std::string& status);
+};
+
+class WorkflowNodeRepository {
+public:
+    static std::vector<models::WorkflowNode> findByWorkflowId(int workflowId);
+    static int create(const models::WorkflowNode& node);
+    static bool update(int workflowId, const std::string& nodeId, const models::WorkflowNode& node);
+    static bool removeByWorkflowId(int workflowId);
+};
+
+class WorkflowEdgeRepository {
+public:
+    static std::vector<models::WorkflowEdge> findByWorkflowId(int workflowId);
+    static int create(const models::WorkflowEdge& edge);
+    static bool removeByWorkflowId(int workflowId);
+};
+
 } // namespace db
 } // namespace web
 } // namespace sophon

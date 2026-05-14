@@ -131,6 +131,36 @@ struct UpgradeRecord {
     std::string completed_at;
 };
 
+struct Workflow {
+    int id = 0;
+    std::string name;
+    std::string description;
+    std::string status = "draft";
+    std::string created_at;
+    std::string updated_at;
+};
+
+struct WorkflowNode {
+    int id = 0;
+    int workflow_id = 0;
+    std::string node_id;
+    std::string node_type;
+    double position_x = 0;
+    double position_y = 0;
+    std::string config_json = "{}";
+    std::string label;
+};
+
+struct WorkflowEdge {
+    int id = 0;
+    int workflow_id = 0;
+    std::string edge_id;
+    std::string source_node;
+    std::string target_node;
+    std::string source_handle = "default";
+    std::string target_handle = "default";
+};
+
 } // namespace models
 } // namespace web
 } // namespace sophon
