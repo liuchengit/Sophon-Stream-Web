@@ -1,5 +1,6 @@
 #include "controllers/TaskController.h"
 #include "types.h"
+#include <utils/json_converter.h>
 #include <iostream>
 
 using json = nlohmann::json;
@@ -18,7 +19,7 @@ void TaskController::asyncHandleHttpRequest(const HttpRequestPtr& req,
                 {"total", 0}
             }}
         };
-        auto resp = HttpResponse::newHttpJsonResponse(response);
+        auto resp = HttpResponse::newHttpJsonResponse(toCppJson(response));
         callback(resp);
 
     } else if (method == Post && path == "/api/v1/tasks") {
@@ -26,7 +27,7 @@ void TaskController::asyncHandleHttpRequest(const HttpRequestPtr& req,
         if (!jsonPtr) {
             json error = {{"code", static_cast<int>(sophon::web::ErrorCode::ERR_INVALID_REQUEST)},
                          {"message", "Invalid request body"}};
-            auto resp = HttpResponse::newHttpJsonResponse(error);
+            auto resp = HttpResponse::newHttpJsonResponse(toCppJson(error));
             resp->setStatusCode(k400BadRequest);
             callback(resp);
             return;
@@ -37,11 +38,11 @@ void TaskController::asyncHandleHttpRequest(const HttpRequestPtr& req,
             {"message", "success"},
             {"data", {
                 {"id", 1},
-                {"name", (*jsonPtr)["name"]},
+                {"name", (*jsonPtr)["name"].asString()},
                 {"status", "stopped"},
             }}
         };
-        auto resp = HttpResponse::newHttpJsonResponse(response);
+        auto resp = HttpResponse::newHttpJsonResponse(toCppJson(response));
         resp->setStatusCode(k201Created);
         callback(resp);
 
@@ -60,7 +61,7 @@ void TaskController::asyncHandleHttpRequest(const HttpRequestPtr& req,
                     {"status", "stopped"},
                 }}
             };
-            auto resp = HttpResponse::newHttpJsonResponse(response);
+            auto resp = HttpResponse::newHttpJsonResponse(toCppJson(response));
             callback(resp);
         } else if (action == "start" || action == "stop" || action == "pause" || action == "resume") {
             json response = {
@@ -71,21 +72,21 @@ void TaskController::asyncHandleHttpRequest(const HttpRequestPtr& req,
                     {"status", action == "start" ? "running" : "stopped"},
                 }}
             };
-            auto resp = HttpResponse::newHttpJsonResponse(response);
+            auto resp = HttpResponse::newHttpJsonResponse(toCppJson(response));
             callback(resp);
         } else if (method == Delete) {
             json response = {{"code", 0}, {"message", "success"}};
-            auto resp = HttpResponse::newHttpJsonResponse(response);
+            auto resp = HttpResponse::newHttpJsonResponse(toCppJson(response));
             callback(resp);
         } else {
             json error = {{"code", 404}, {"message", "Not found"}};
-            auto resp = HttpResponse::newHttpJsonResponse(error);
+            auto resp = HttpResponse::newHttpJsonResponse(toCppJson(error));
             resp->setStatusCode(k404NotFound);
             callback(resp);
         }
     } else {
         json error = {{"code", 404}, {"message", "Not found"}};
-        auto resp = HttpResponse::newHttpJsonResponse(error);
+        auto resp = HttpResponse::newHttpJsonResponse(toCppJson(error));
         resp->setStatusCode(k404NotFound);
         callback(resp);
     }

@@ -41,10 +41,11 @@ void ResultCollector::collectResult(const DetectionResult& result) {
 
     // Notify callbacks
     auto callbacks = resultCallbacks_;
-    std::unlock_guard<std::mutex> unlock(mutex_);
+    mutex_.unlock();
     for (auto& cb : callbacks) {
         cb(result);
     }
+    mutex_.lock();
 }
 
 void ResultCollector::checkAlarmCondition(const DetectionResult& result) {
@@ -70,10 +71,11 @@ void ResultCollector::checkAlarmCondition(const DetectionResult& result) {
             alarmRules_.at(pair.first).lastTrigger = std::chrono::steady_clock::now();
 
             auto callbacks = alarmCallbacks_;
-            std::unlock_guard<std::mutex> unlock(mutex_);
+            mutex_.unlock();
             for (auto& cb : callbacks) {
                 cb(alarm);
             }
+            mutex_.lock();
         }
     }
 }

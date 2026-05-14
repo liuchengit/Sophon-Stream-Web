@@ -4,6 +4,8 @@ project(sophon-stream-engine LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+find_package(nlohmann_json CONFIG REQUIRED)
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 file(GLOB_RECURSE ENGINE_SOURCES "src/*.cpp")

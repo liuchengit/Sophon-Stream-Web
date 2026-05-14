@@ -16,6 +16,7 @@ find_package(SQLite3 REQUIRED)
 # Include directories
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../engine/include)
 
 # Source files
 file(GLOB_RECURSE SOURCES
@@ -33,7 +34,8 @@ target_link_libraries(sophon-stream-web
     OpenSSL::SSL
     OpenSSL::Crypto
     nlohmann_json::nlohmann_json
-    SQLite::SQLite3
+    SQLite3_lib
+    sophon-stream-engine
 )
 
 # Install
@@ -54,14 +56,14 @@ add_executable(test_database tests/test_database.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/db/database_manager.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/db/repositories.cpp
 )
-target_link_libraries(test_database PRIVATE nlohmann_json::nlohmann_json SQLite::SQLite3)
+target_link_libraries(test_database PRIVATE nlohmann_json::nlohmann_json SQLite3_lib)
 
 add_executable(test_auth tests/test_auth.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/auth/auth_service.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/db/database_manager.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/db/repositories.cpp
 )
-target_link_libraries(test_auth PRIVATE nlohmann_json::nlohmann_json SQLite::SQLite3)
+target_link_libraries(test_auth PRIVATE nlohmann_json::nlohmann_json SQLite3_lib)
 
 # Enable testing
 enable_testing()

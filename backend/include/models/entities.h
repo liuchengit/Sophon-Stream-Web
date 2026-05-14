@@ -65,6 +65,7 @@ struct Algorithm {
     std::string model_path;
     std::string config_schema;
     std::string plugin_path;
+    std::string status = "inactive";
     std::string created_at;
 };
 

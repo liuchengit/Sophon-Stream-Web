@@ -92,9 +92,20 @@ void ResourceCollector::collectLoop() {
         }
 
         // Persist to database
-        db::MonitoringMetricRepository::create({"tpu", metrics.tpu_usage});
-        db::MonitoringMetricRepository::create({"cpu", metrics.cpu_usage});
-        db::MonitoringMetricRepository::create({"memory", metrics.memory_usage});
+        models::MonitoringMetric tpuMetric;
+        tpuMetric.metric_type = "tpu";
+        tpuMetric.value = metrics.tpu_usage;
+        db::MonitoringMetricRepository::create(tpuMetric);
+
+        models::MonitoringMetric cpuMetric;
+        cpuMetric.metric_type = "cpu";
+        cpuMetric.value = metrics.cpu_usage;
+        db::MonitoringMetricRepository::create(cpuMetric);
+
+        models::MonitoringMetric memMetric;
+        memMetric.metric_type = "memory";
+        memMetric.value = metrics.memory_usage;
+        db::MonitoringMetricRepository::create(memMetric);
 
         // Notify callbacks
         {

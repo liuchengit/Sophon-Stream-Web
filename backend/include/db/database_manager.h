@@ -29,6 +29,7 @@ private:
     DatabaseManager& operator=(const DatabaseManager&) = delete;
 
     bool createTables();
+    bool seedDefaultData();
 
     void* db_;
     std::mutex mutex_;

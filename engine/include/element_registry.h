@@ -44,7 +44,7 @@ private:
     ElementRegistry() = default;
 
     std::map<std::string, ElementConfig> elements_;
-    std::mutex mutex_;
+    mutable std::mutex mutex_;
 };
 
 } // namespace stream

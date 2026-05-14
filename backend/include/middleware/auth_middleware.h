@@ -14,18 +14,18 @@ namespace sophon {
 namespace web {
 namespace middleware {
 
-class AuthMiddleware : public HttpMiddleware<AuthMiddleware> {
+class AuthMiddleware : public HttpMiddleware<AuthMiddleware, false> {
 public:
-    void invoke(const HttpRequestPtr& req, HttpMiddlewareNextCallback&& nextCb, HttpMiddlewareCallback&& endCb) override;
+    void invoke(const HttpRequestPtr& req, MiddlewareNextCallback&& nextCb, MiddlewareCallback&& endCb) override;
 
 private:
     bool isPublicPath(const std::string& path) const;
     std::string extractToken(const HttpRequestPtr& req) const;
 };
 
-class RBACMiddleware : public HttpMiddleware<RBACMiddleware> {
+class RBACMiddleware : public HttpMiddleware<RBACMiddleware, false> {
 public:
-    void invoke(const HttpRequestPtr& req, HttpMiddlewareNextCallback&& nextCb, HttpMiddlewareCallback&& endCb) override;
+    void invoke(const HttpRequestPtr& req, MiddlewareNextCallback&& nextCb, MiddlewareCallback&& endCb) override;
 
     static void registerPermission(const std::string& pathPattern, const std::string& permission);
     static void registerRolePermission(const std::string& role, const std::string& permission);

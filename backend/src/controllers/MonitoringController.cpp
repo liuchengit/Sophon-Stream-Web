@@ -1,5 +1,6 @@
 #include "controllers/MonitoringController.h"
 #include "types.h"
+#include <utils/json_converter.h>
 #include <iostream>
 #include <fstream>
 
@@ -74,7 +75,7 @@ void MonitoringController::asyncHandleHttpRequest(const HttpRequestPtr& req,
                 {"memory_used", static_cast<int>(8192 * memoryUsage / 100)},
             }}
         };
-        auto resp = HttpResponse::newHttpJsonResponse(response);
+        auto resp = HttpResponse::newHttpJsonResponse(toCppJson(response));
         callback(resp);
 
     } else if (path == "/api/v1/monitoring/history") {
@@ -83,12 +84,12 @@ void MonitoringController::asyncHandleHttpRequest(const HttpRequestPtr& req,
             {"message", "success"},
             {"data", json::array()}
         };
-        auto resp = HttpResponse::newHttpJsonResponse(response);
+        auto resp = HttpResponse::newHttpJsonResponse(toCppJson(response));
         callback(resp);
 
     } else {
         json error = {{"code", 404}, {"message", "Not found"}};
-        auto resp = HttpResponse::newHttpJsonResponse(error);
+        auto resp = HttpResponse::newHttpJsonResponse(toCppJson(error));
         resp->setStatusCode(k404NotFound);
         callback(resp);
     }

@@ -31,9 +31,9 @@ bool StreamEngine::loadConfig(const std::string& configPath) {
         config_ = {
             {"graphs", json::array()},
             {"elements", {
-                {"decoder", {"type": "decoder", "codec": "h264"}},
-                {"detector", {"type": "detector", "model": "yolox"}},
-                {"tracker", {"type": "tracker", "algorithm": "bytetrack"}},
+                {"decoder", {{"type", "decoder"}, {"codec", "h264"}}},
+                {"detector", {{"type", "detector"}, {"model", "yolox"}}},
+                {"tracker", {{"type", "tracker"}, {"algorithm", "bytetrack"}}},
             }}
         };
         return true;

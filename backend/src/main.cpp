@@ -6,6 +6,9 @@
 #include "stream_engine.h"
 #include "middleware/auth_middleware.h"
 
+using namespace drogon;
+using namespace sophon::web::middleware;
+
 int main() {
     std::cout << "Starting Sophon-Stream Web Management System..." << std::endl;
 
@@ -33,8 +36,8 @@ int main() {
     }
 
     // Register middlewares
-    drogon::app().registerMiddleware<sophon::web::middleware::AuthMiddleware>();
-    drogon::app().registerMiddleware<sophon::web::middleware::RBACMiddleware>();
+    drogon::app().registerMiddleware(std::make_shared<AuthMiddleware>());
+    drogon::app().registerMiddleware(std::make_shared<RBACMiddleware>());
 
     // Load configuration
     drogon::app().loadConfigFile("config.json");

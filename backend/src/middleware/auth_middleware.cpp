@@ -1,5 +1,6 @@
 #include "middleware/auth_middleware.h"
 #include "types.h"
+#include <utils/json_converter.h>
 #include <iostream>
 #include <sstream>
 
@@ -12,7 +13,7 @@ namespace middleware {
 std::unordered_map<std::string, std::string> RBACMiddleware::pathPermissions_;
 std::unordered_map<std::string, std::unordered_set<std::string>> RBACMiddleware::rolePermissions_;
 
-void AuthMiddleware::invoke(const HttpRequestPtr& req, HttpMiddlewareNextCallback&& nextCb, HttpMiddlewareCallback&& endCb) {
+void AuthMiddleware::invoke(const HttpRequestPtr& req, MiddlewareNextCallback&& nextCb, MiddlewareCallback&& endCb) {
     auto path = req->path();
 
     if (isPublicPath(path)) {
@@ -26,7 +27,7 @@ void AuthMiddleware::invoke(const HttpRequestPtr& req, HttpMiddlewareNextCallbac
     if (token.empty()) {
         json error = {{"code", static_cast<int>(sophon::web::ErrorCode::ERR_UNAUTHORIZED)},
                      {"message", "Missing authentication token"}};
-        auto resp = HttpResponse::newHttpJsonResponse(error);
+        auto resp = HttpResponse::newHttpJsonResponse(toCppJson(error));
         resp->setStatusCode(k401Unauthorized);
         endCb(resp);
         return;
@@ -35,7 +36,7 @@ void AuthMiddleware::invoke(const HttpRequestPtr& req, HttpMiddlewareNextCallbac
     if (!auth::AuthService::instance().verifyToken(token)) {
         json error = {{"code", static_cast<int>(sophon::web::ErrorCode::ERR_UNAUTHORIZED)},
                      {"message", "Invalid or expired token"}};
-        auto resp = HttpResponse::newHttpJsonResponse(error);
+        auto resp = HttpResponse::newHttpJsonResponse(toCppJson(error));
         resp->setStatusCode(k401Unauthorized);
         endCb(resp);
         return;
@@ -77,7 +78,7 @@ void RBACMiddleware::registerRolePermission(const std::string& role, const std::
     rolePermissions_[role].insert(permission);
 }
 
-void RBACMiddleware::invoke(const HttpRequestPtr& req, HttpMiddlewareNextCallback&& nextCb, HttpMiddlewareCallback&& endCb) {
+void RBACMiddleware::invoke(const HttpRequestPtr& req, MiddlewareNextCallback&& nextCb, MiddlewareCallback&& endCb) {
     auto path = req->path();
     auto token = req->getHeader("Authorization");
 
@@ -97,7 +98,7 @@ void RBACMiddleware::invoke(const HttpRequestPtr& req, HttpMiddlewareNextCallbac
         if (!auth::AuthService::instance().hasPermission(token.substr(7), requiredPermission)) {
             json error = {{"code", static_cast<int>(sophon::web::ErrorCode::ERR_FORBIDDEN)},
                          {"message", "Insufficient permissions"}};
-            auto resp = HttpResponse::newHttpJsonResponse(error);
+            auto resp = HttpResponse::newHttpJsonResponse(toCppJson(error));
             resp->setStatusCode(k403Forbidden);
             endCb(resp);
             return;
