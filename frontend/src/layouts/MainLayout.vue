@@ -51,6 +51,7 @@
           <breadcrumb />
         </div>
         <div class="header-right">
+          <NotificationBell ref="notificationRef" />
           <el-dropdown @command="handleCommand">
             <span class="user-info">
               <el-icon><User /></el-icon>
@@ -72,9 +73,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useWebSocket } from '../composables/useWebSocket'
+import NotificationBell from '../components/NotificationBell.vue'
 import {
   Odometer,
   Monitor,
@@ -90,6 +93,9 @@ import {
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const notificationRef = ref<InstanceType<typeof NotificationBell> | null>(null)
+
+const { connect, on } = useWebSocket()
 
 const activeMenu = computed(() => route.path)
 
@@ -99,6 +105,25 @@ const handleCommand = (command: string) => {
     router.push('/login')
   }
 }
+
+onMounted(() => {
+  const token = localStorage.getItem('token')
+  if (token && authStore.isAuthenticated) {
+    connect(token)
+
+    on('alarm', (msg) => {
+      if (msg.data && notificationRef.value) {
+        notificationRef.value.addAlarmNotification(msg.data as Record<string, unknown>)
+      }
+    })
+  }
+})
+
+watch(() => authStore.isAuthenticated, (val) => {
+  if (!val) {
+    // disconnected on logout handled by composable
+  }
+})
 </script>
 
 <style scoped>

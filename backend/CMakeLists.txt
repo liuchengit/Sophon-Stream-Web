@@ -17,6 +17,7 @@ find_package(SQLite3 REQUIRED)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../engine/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # Source files
 file(GLOB_RECURSE SOURCES

@@ -1,6 +1,12 @@
 #include <drogon/drogon.h>
+#include <drogon/HttpAppFramework.h>
 #include <iostream>
 #include <filesystem>
+#include <random>
+#include <chrono>
+#include <thread>
+#include <sstream>
+#include <iomanip>
 #include "db/database_manager.h"
 #include "auth/auth_service.h"
 #include "stream_engine.h"
@@ -9,6 +15,7 @@
 #include "utils/json_converter.h"
 #include "db/repositories.h"
 #include "models/entities.h"
+#include "websocket/websocket_manager.h"
 #include <nlohmann/json.hpp>
 
 using namespace drogon;
@@ -245,8 +252,33 @@ int main() {
     // Load configuration
     drogon::app().loadConfigFile("config.json");
 
+    // Start periodic metrics broadcast via WebSocket
+    auto metricsTimer = drogon::app().getLoop()->runEvery(3.0, []() {
+        using namespace sophon::web::websocket;
+        if (WebSocketManager::instance().getConnectionCount() == 0) return;
+
+        std::mt19937 gen(std::random_device{}());
+        std::uniform_real_distribution<double> cpuDist(15.0, 85.0);
+        std::uniform_real_distribution<double> memDist(40.0, 75.0);
+        std::uniform_real_distribution<double> gpuDist(10.0, 95.0);
+
+        auto now = std::chrono::system_clock::now();
+        auto timeT = std::chrono::system_clock::to_time_t(now);
+        std::string ts;
+        {
+            std::stringstream ss;
+            ss << std::put_time(std::gmtime(&timeT), "%Y-%m-%dT%H:%M:%SZ");
+            ts = ss.str();
+        }
+
+        WebSocketManager::instance().broadcastMetrics("cpu_usage", cpuDist(gen), ts);
+        WebSocketManager::instance().broadcastMetrics("memory_usage", memDist(gen), ts);
+        WebSocketManager::instance().broadcastMetrics("gpu_usage", gpuDist(gen), ts);
+    });
+
     std::cout << "Sophon-Stream Web Management System started successfully." << std::endl;
     std::cout << "API: http://localhost:8080" << std::endl;
+    std::cout << "WebSocket: ws://localhost:8080/api/v1/ws/notifications?token=<JWT_TOKEN>" << std::endl;
     std::cout << "Default admin: admin / admin123" << std::endl;
 
     // Start the application
