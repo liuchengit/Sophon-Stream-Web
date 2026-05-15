@@ -86,6 +86,7 @@ import * as echarts from 'echarts'
 import { Monitor, VideoCamera, Warning, Cpu } from '@element-plus/icons-vue'
 import { dashboardApi } from '../api/dashboard'
 import { monitoringApi } from '../api/monitoring'
+import { useWebSocket } from '../composables/useWebSocket'
 import type { ECharts } from 'echarts'
 import { ElMessage } from 'element-plus'
 
@@ -100,17 +101,35 @@ const resourceChartRef = ref<HTMLElement>()
 const taskChartRef = ref<HTMLElement>()
 let resourceChart: ECharts | null = null
 let taskChart: ECharts | null = null
-let ws: WebSocket | null = null
+
+const { connect, on, disconnect } = useWebSocket()
 
 onMounted(() => {
   initCharts()
-  connectWebSocket()
   fetchStats()
   fetchResourceMetrics()
+
+  const token = localStorage.getItem('token')
+  if (token) {
+    connect(token)
+    on('metrics', (msg) => {
+      if (msg.data) {
+        const type = msg.data.metricType as string
+        const value = msg.data.value as number
+        if (type === 'cpu_usage') {
+          updateResourceChart({ cpu_usage: value })
+        } else if (type === 'memory_usage') {
+          updateResourceChart({ memory_usage: value })
+        } else if (type === 'gpu_usage') {
+          updateResourceChart({ tpu_usage: value })
+        }
+      }
+    })
+  }
 })
 
 onUnmounted(() => {
-  ws?.close()
+  disconnect()
   resourceChart?.dispose()
   taskChart?.dispose()
 })
@@ -151,30 +170,15 @@ const initCharts = () => {
   }
 }
 
-const connectWebSocket = () => {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  const wsUrl = `${protocol}//${window.location.host}/ws/monitoring`
-  ws = new WebSocket(wsUrl)
-
-  ws.onmessage = (event) => {
-    const data = JSON.parse(event.data)
-    updateResourceChart(data)
-  }
-
-  ws.onclose = () => {
-    setTimeout(connectWebSocket, 3000)
-  }
-}
-
-const updateResourceChart = (data: { tpu_usage: number; cpu_usage: number; memory_usage: number }) => {
+const updateResourceChart = (data: { tpu_usage?: number; cpu_usage?: number; memory_usage?: number }) => {
   if (!resourceChart) return
-  resourceChart.setOption({
-    series: [
-      { name: 'TPU', data: [data.tpu_usage] },
-      { name: 'CPU', data: [data.cpu_usage] },
-      { name: '内存', data: [data.memory_usage] },
-    ],
-  })
+  const option: Record<string, unknown> = {}
+  const series: Array<Record<string, unknown>> = []
+  if (data.tpu_usage !== undefined) series.push({ name: 'TPU', data: [data.tpu_usage] })
+  if (data.cpu_usage !== undefined) series.push({ name: 'CPU', data: [data.cpu_usage] })
+  if (data.memory_usage !== undefined) series.push({ name: '内存', data: [data.memory_usage] })
+  if (series.length > 0) option.series = series
+  resourceChart.setOption(option)
 }
 
 const fetchStats = async () => {

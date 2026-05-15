@@ -91,7 +91,29 @@ CREATE TABLE IF NOT EXISTS alarm_rules (
     debounce_seconds INTEGER DEFAULT 0,
     notification_channels TEXT,
     enabled BOOLEAN DEFAULT 1,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    -- GB28181 标准字段
+    gb_alarm_type VARCHAR(20),
+    alarm_method INTEGER DEFAULT 5,
+    subscribe_status VARCHAR(20) DEFAULT 'unsubscribed',
+    subscribe_expires DATETIME,
+    device_id INTEGER REFERENCES devices(id),
+    channel_id INTEGER,
+    alarm_priority VARCHAR(20) DEFAULT 'medium',
+    alarm_description TEXT
+);
+
+CREATE TABLE IF NOT EXISTS alarm_subscriptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    device_id INTEGER REFERENCES devices(id),
+    channel_id INTEGER,
+    alarm_types TEXT,
+    subscribe_status VARCHAR(20) DEFAULT 'active',
+    subscribe_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    expires_time DATETIME,
+    last_heartbeat DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS alarm_events (
@@ -100,7 +122,20 @@ CREATE TABLE IF NOT EXISTS alarm_events (
     task_id INTEGER REFERENCES tasks(id),
     evidence_path VARCHAR(255),
     context TEXT,
-    triggered_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    triggered_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    -- GB28181 标准字段
+    gb_alarm_code VARCHAR(20),
+    alarm_priority VARCHAR(20) DEFAULT 'medium',
+    alarm_type VARCHAR(50),
+    device_id INTEGER REFERENCES devices(id),
+    channel_id INTEGER,
+    sip_transaction_id VARCHAR(100),
+    alarm_description TEXT,
+    handled_status VARCHAR(20) DEFAULT 'pending',
+    handled_at DATETIME,
+    handled_by INTEGER REFERENCES users(id),
+    handle_result TEXT,
+    alarm_method INTEGER DEFAULT 5
 );
 
 CREATE TABLE IF NOT EXISTS monitoring_metrics (
@@ -168,6 +203,29 @@ CREATE TABLE IF NOT EXISTS workflow_edges (
     source_handle VARCHAR(50) DEFAULT 'default',
     target_handle VARCHAR(50) DEFAULT 'default',
     FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS workflow_executions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    workflow_id INTEGER NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'running',
+    started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    finished_at DATETIME,
+    error_message TEXT DEFAULT '',
+    FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS workflow_execution_nodes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    execution_id INTEGER NOT NULL,
+    node_id VARCHAR(100) NOT NULL,
+    node_type VARCHAR(50) NOT NULL,
+    label VARCHAR(200) DEFAULT '',
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    started_at DATETIME,
+    finished_at DATETIME,
+    error_message TEXT DEFAULT '',
+    FOREIGN KEY (execution_id) REFERENCES workflow_executions(id) ON DELETE CASCADE
 );
 
 -- Seed data is inserted separately via seedDefaultData()
@@ -352,6 +410,19 @@ bool DatabaseManager::execute(const std::string& sql) {
         return false;
     }
     return true;
+}
+
+int DatabaseManager::queryWithCallback(const std::string& sql, int (*callback)(void*, int, char**, char**), void* userData) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!initialized_ || !db_) return -1;
+
+    char* errMsg = nullptr;
+    int rc = sqlite3_exec(reinterpret_cast<sqlite3*>(db_), sql.c_str(), callback, userData, &errMsg);
+    if (rc != SQLITE_OK) {
+        std::cerr << "SQL query error: " << errMsg << " | SQL: " << sql << std::endl;
+        sqlite3_free(errMsg);
+    }
+    return rc;
 }
 
 int DatabaseManager::lastInsertRowId() {

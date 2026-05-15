@@ -1,4 +1,4 @@
-import request from './request'
+import { request } from './request'
 
 export interface Workflow {
   id: number
@@ -29,32 +29,89 @@ export interface WorkflowEdge {
   targetHandle?: string
 }
 
-export interface CreateWorkflowParams {
-  name: string
-  description?: string
-  status?: string
+export interface ExecutionStatus {
+  executionId: number
+  workflowId: number
+  status: string
+  startedAt: string
+  finishedAt?: string
+  errorMessage?: string
+  nodes: ExecutionNode[]
 }
 
-export function getWorkflows(params?: { page?: number; limit?: number; status?: string }) {
-  return request.get<{ list: Workflow[]; total: number }>('/api/v1/workflows', { params })
+export interface ExecutionNode {
+  nodeId: string
+  nodeType: string
+  label: string
+  status: string
+  startedAt?: string
+  finishedAt?: string
+  errorMessage?: string
 }
 
-export function getWorkflow(id: number) {
-  return request.get<Workflow>(`/api/v1/workflows/${id}`)
-}
+export const workflowApi = {
+  list: (params?: { page?: number; limit?: number; status?: string }) =>
+    request<{ items: Workflow[]; total: number }>({
+      url: '/workflows',
+      method: 'GET',
+      params,
+    }),
 
-export function createWorkflow(data: CreateWorkflowParams) {
-  return request.post<Workflow>('/api/v1/workflows', data)
-}
+  get: (id: number) =>
+    request<Workflow>({
+      url: `/workflows/${id}`,
+      method: 'GET',
+    }),
 
-export function updateWorkflow(id: number, data: Partial<Workflow>) {
-  return request.put<Workflow>(`/api/v1/workflows/${id}`, data)
-}
+  create: (data: { name: string; description?: string; status?: string }) =>
+    request<Workflow>({
+      url: '/workflows',
+      method: 'POST',
+      data,
+    }),
 
-export function deleteWorkflow(id: number) {
-  return request.delete(`/api/v1/workflows/${id}`)
-}
+  update: (id: number, data: Partial<Workflow>) =>
+    request<Workflow>({
+      url: `/workflows/${id}`,
+      method: 'PUT',
+      data,
+    }),
 
-export function updateWorkflowStatus(id: number, status: string) {
-  return request.put(`/api/v1/workflows/${id}`, { status })
+  delete: (id: number) =>
+    request<void>({
+      url: `/workflows/${id}`,
+      method: 'DELETE',
+    }),
+
+  updateStatus: (id: number, status: string) =>
+    request<Workflow>({
+      url: `/workflows/${id}`,
+      method: 'PUT',
+      data: { status },
+    }),
+
+  startExecution: (id: number) =>
+    request<{ executionId: number; workflowId: number; status: string; nodeCount: number }>({
+      url: `/workflows/${id}/start`,
+      method: 'POST',
+    }),
+
+  stopExecution: (id: number) =>
+    request<void>({
+      url: `/workflows/${id}/stop`,
+      method: 'POST',
+    }),
+
+  getExecutionStatus: (id: number) =>
+    request<ExecutionStatus>({
+      url: `/workflows/${id}/status`,
+      method: 'GET',
+    }),
+
+  getExecutionHistory: (id: number, params?: { page?: number; limit?: number }) =>
+    request<{ items: Array<{ id: number; status: string; startedAt: string; finishedAt?: string; errorMessage?: string }>; total: number }>({
+      url: `/workflows/${id}/history`,
+      method: 'GET',
+      params,
+    }),
 }

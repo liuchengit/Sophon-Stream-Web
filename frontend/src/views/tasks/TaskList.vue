@@ -20,11 +20,12 @@
           </template>
         </el-table-column>
         <el-table-column prop="schedule_cron" label="定时任务" width="150" />
-        <el-table-column label="操作" width="300">
+        <el-table-column label="操作" width="380">
           <template #default="{ row }">
             <el-button v-if="row.status === 'stopped'" size="small" type="success" @click="handleStart(row.id)">启动</el-button>
             <el-button v-if="row.status === 'running'" size="small" type="warning" @click="handleStop(row.id)">停止</el-button>
             <el-button size="small" @click="handleEdit(row)">编辑</el-button>
+            <el-button size="small" type="primary" @click="openEditor(row.id)">编排</el-button>
             <el-button size="small" type="danger" @click="handleDelete(row.id)">删除</el-button>
           </template>
         </el-table-column>
@@ -72,9 +73,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { taskApi } from '../../api/tasks'
 import type { Task } from '../../api/tasks'
+
+const router = useRouter()
 
 const tasks = ref<Task[]>([])
 const loading = ref(false)
@@ -192,6 +196,10 @@ const handleDelete = async (id: number) => {
       ElMessage.error('删除失败')
     }
   }
+}
+
+const openEditor = (id: number) => {
+  router.push(`/tasks/${id}/editor`)
 }
 
 const handleSubmit = async () => {

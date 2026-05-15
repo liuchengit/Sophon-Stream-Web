@@ -59,6 +59,7 @@ public:
     static bool update(int id, const models::AlarmRule& rule);
     static bool remove(int id);
     static bool toggle(int id, bool enabled);
+    static bool updateSubscribeStatus(int id, const std::string& status, const std::string& expires);
 };
 
 class AlarmEventRepository {
@@ -67,6 +68,18 @@ public:
     static std::vector<models::AlarmEvent> findAll(int page = 1, int limit = 20);
     static int count();
     static int create(const models::AlarmEvent& event);
+    static bool updateHandled(int id, int userId, const std::string& result);
+};
+
+class AlarmSubscriptionRepository {
+public:
+    static std::optional<models::AlarmSubscription> findById(int id);
+    static std::vector<models::AlarmSubscription> findByDevice(int deviceId);
+    static std::vector<models::AlarmSubscription> findAll();
+    static int create(const models::AlarmSubscription& sub);
+    static bool update(int id, const models::AlarmSubscription& sub);
+    static bool remove(int id);
+    static bool updateHeartbeat(int id);
 };
 
 class MonitoringMetricRepository {
@@ -126,6 +139,24 @@ public:
     static std::vector<models::WorkflowEdge> findByWorkflowId(int workflowId);
     static int create(const models::WorkflowEdge& edge);
     static bool removeByWorkflowId(int workflowId);
+};
+
+class WorkflowExecutionRepository {
+public:
+    static std::optional<models::WorkflowExecution> findById(int id);
+    static std::vector<models::WorkflowExecution> findByWorkflowId(int workflowId, int limit = 20);
+    static std::optional<models::WorkflowExecution> findLatestRunning(int workflowId);
+    static int create(int workflowId);
+    static bool updateStatus(int id, const std::string& status, const std::string& errorMsg = "");
+    static bool finish(int id, const std::string& errorMsg = "");
+};
+
+class WorkflowExecutionNodeRepository {
+public:
+    static std::vector<models::WorkflowExecutionNode> findByExecutionId(int executionId);
+    static std::optional<models::WorkflowExecutionNode> findByExecutionAndNodeId(int executionId, const std::string& nodeId);
+    static int create(int executionId, const std::string& nodeId, const std::string& nodeType, const std::string& label);
+    static bool updateStatus(int executionId, const std::string& nodeId, const std::string& status, const std::string& errorMsg = "");
 };
 
 } // namespace db

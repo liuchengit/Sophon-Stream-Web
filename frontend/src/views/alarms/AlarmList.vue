@@ -19,9 +19,23 @@
                 <el-switch v-model="row.enabled" @change="handleToggleRule(row)" />
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="150">
+            <el-table-column prop="subscribe_status" label="订阅状态" width="100">
+              <template #default="{ row }">
+                <el-tag :type="row.subscribe_status === 'subscribed' ? 'success' : 'info'" size="small">
+                  {{ row.subscribe_status || '未订阅' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="250">
               <template #default="{ row }">
                 <el-button size="small" @click="handleEditRule(row)">编辑</el-button>
+                <el-button 
+                  size="small" 
+                  :type="row.subscribe_status === 'subscribed' ? 'warning' : 'primary'"
+                  @click="handleSubscribeRule(row)"
+                >
+                  {{ row.subscribe_status === 'subscribed' ? '取消订阅' : '订阅' }}
+                </el-button>
                 <el-button size="small" type="danger" @click="handleDeleteRule(row.id)">删除</el-button>
               </template>
             </el-table-column>
@@ -31,13 +45,33 @@
       <el-tab-pane label="报警历史" name="events">
         <el-card>
           <el-table :data="events" v-loading="eventsLoading" stripe>
-            <el-table-column prop="rule_id" label="规则 ID" width="100" />
-            <el-table-column prop="task_id" label="任务 ID" width="100" />
-            <el-table-column prop="evidence_path" label="证据路径" show-overflow-tooltip />
-            <el-table-column prop="triggered_at" label="触发时间" width="180" />
-            <el-table-column label="操作" width="100">
+            <el-table-column prop="alarm_type" label="报警类型" width="120" />
+            <el-table-column prop="alarm_priority" label="优先级" width="80">
               <template #default="{ row }">
-                <el-button size="small" @click="handleViewEvidence(row)">查看</el-button>
+                <el-tag :type="row.alarm_priority === 'high' ? 'danger' : row.alarm_priority === 'medium' ? 'warning' : 'info'" size="small">
+                  {{ row.alarm_priority || '普通' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="device_id" label="设备 ID" width="100" />
+            <el-table-column prop="alarm_description" label="报警描述" show-overflow-tooltip />
+            <el-table-column prop="triggered_at" label="触发时间" width="180" />
+            <el-table-column prop="handled_status" label="处置状态" width="100">
+              <template #default="{ row }">
+                <el-tag :type="row.handled_status === 'handled' ? 'success' : 'warning'" size="small">
+                  {{ row.handled_status === 'handled' ? '已处置' : '待处置' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="120">
+              <template #default="{ row }">
+                <el-button 
+                  v-if="row.handled_status !== 'handled'"
+                  size="small" 
+                  type="primary" 
+                  @click="handleHandleEvent(row)"
+                >处置</el-button>
+                <el-button v-else size="small" @click="handleViewEvidence(row)">查看</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -175,11 +209,26 @@ const handleEditRule = (row: AlarmRule) => {
 
 const handleToggleRule = async (rule: AlarmRule) => {
   try {
-    await alarmApi.updateRule(rule.id, { enabled: rule.enabled })
+    await alarmApi.toggleRule(rule.id)
     ElMessage.success('状态已更新')
   } catch {
     ElMessage.error('更新状态失败')
     rule.enabled = !rule.enabled
+  }
+}
+
+const handleSubscribeRule = async (rule: AlarmRule) => {
+  try {
+    if (rule.subscribe_status === 'subscribed') {
+      await alarmApi.unsubscribeRule(rule.id)
+      ElMessage.success('已取消订阅')
+    } else {
+      await alarmApi.subscribeRule(rule.id)
+      ElMessage.success('订阅成功，有效期 24 小时')
+    }
+    fetchRules()
+  } catch {
+    ElMessage.error('操作失败')
   }
 }
 
@@ -225,6 +274,24 @@ const handleRuleSubmit = async () => {
 
 const handleViewEvidence = (_event: AlarmEvent) => {
   ElMessage.info('证据查看功能开发中')
+}
+
+const handleHandleEvent = async (event: AlarmEvent) => {
+  try {
+    const result = await ElMessageBox.prompt('请输入处置结果', '处置报警', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      inputPattern: /.+/,
+      inputErrorMessage: '请输入处置结果',
+    })
+    await alarmApi.handleEvent(event.id, { result: result.value })
+    ElMessage.success('处置成功')
+    fetchEvents()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('处置失败')
+    }
+  }
 }
 
 const resetRuleForm = () => {

@@ -85,6 +85,28 @@ struct AlarmRule {
     std::string notification_channels;
     bool enabled = true;
     std::string created_at;
+    // GB28181 fields
+    std::string gb_alarm_type;
+    int alarm_method = 5;
+    std::string subscribe_status;
+    std::string subscribe_expires;
+    int device_id = 0;
+    int channel_id = 0;
+    std::string alarm_priority;
+    std::string alarm_description;
+};
+
+struct AlarmSubscription {
+    int id = 0;
+    int device_id = 0;
+    int channel_id = 0;
+    std::string alarm_types;
+    std::string subscribe_status;
+    std::string subscribe_time;
+    std::string expires_time;
+    std::string last_heartbeat;
+    std::string created_at;
+    std::string updated_at;
 };
 
 struct AlarmEvent {
@@ -94,6 +116,19 @@ struct AlarmEvent {
     std::string evidence_path;
     std::string context;
     std::string triggered_at;
+    // GB28181 fields
+    std::string gb_alarm_code;
+    std::string alarm_priority;
+    std::string alarm_type;
+    int device_id = 0;
+    int channel_id = 0;
+    std::string sip_transaction_id;
+    std::string alarm_description;
+    std::string handled_status;
+    std::string handled_at;
+    int handled_by = 0;
+    std::string handle_result;
+    int alarm_method = 5;
 };
 
 struct MonitoringMetric {
@@ -159,6 +194,27 @@ struct WorkflowEdge {
     std::string target_node;
     std::string source_handle = "default";
     std::string target_handle = "default";
+};
+
+struct WorkflowExecution {
+    int id = 0;
+    int workflow_id = 0;
+    std::string status = "running";
+    std::string started_at;
+    std::string finished_at;
+    std::string error_message;
+};
+
+struct WorkflowExecutionNode {
+    int id = 0;
+    int execution_id = 0;
+    std::string node_id;
+    std::string node_type;
+    std::string label;
+    std::string status = "pending";
+    std::string started_at;
+    std::string finished_at;
+    std::string error_message;
 };
 
 } // namespace models

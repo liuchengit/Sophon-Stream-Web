@@ -3,6 +3,7 @@
 #include <string>
 #include <memory>
 #include <mutex>
+#include <functional>
 
 namespace sophon {
 namespace web {
@@ -14,6 +15,7 @@ public:
 
     bool initialize(const std::string& dbPath = "data/sophon-web.db");
     bool execute(const std::string& sql);
+    int queryWithCallback(const std::string& sql, int (*callback)(void*, int, char**, char**), void* userData);
     int lastInsertRowId();
     std::string query(const std::string& sql);
 

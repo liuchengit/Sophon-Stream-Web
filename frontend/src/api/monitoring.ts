@@ -16,6 +16,19 @@ export interface AlarmEvent {
   evidence_path: string
   context: Record<string, unknown>
   triggered_at: string
+  // GB28181 fields
+  gb_alarm_code?: string
+  alarm_priority?: string
+  alarm_type?: string
+  device_id?: number
+  channel_id?: number
+  sip_transaction_id?: string
+  alarm_description?: string
+  handled_status?: string
+  handled_at?: string
+  handled_by?: number
+  handle_result?: string
+  alarm_method?: number
 }
 
 export interface AlarmRule {
@@ -26,6 +39,15 @@ export interface AlarmRule {
   notification_channels: string
   enabled: boolean
   created_at: string
+  // GB28181 fields
+  gb_alarm_type?: string
+  alarm_method?: number
+  subscribe_status?: string
+  subscribe_expires?: string
+  device_id?: number
+  channel_id?: number
+  alarm_priority?: string
+  alarm_description?: string
 }
 
 export const monitoringApi = {
@@ -70,10 +92,35 @@ export const alarmApi = {
       method: 'DELETE',
     }),
 
-  listEvents: (params?: { page?: number; limit?: number }) =>
+  toggleRule: (id: number) =>
+    request<{ id: number; enabled: boolean }>({
+      url: `/alarms/rules/${id}/toggle`,
+      method: 'POST',
+    }),
+
+  subscribeRule: (id: number) =>
+    request<{ id: number; subscribe_status: string; subscribe_expires: string }>({
+      url: `/alarms/rules/${id}/subscribe`,
+      method: 'POST',
+    }),
+
+  unsubscribeRule: (id: number) =>
+    request<{ id: number; subscribe_status: string }>({
+      url: `/alarms/rules/${id}/unsubscribe`,
+      method: 'POST',
+    }),
+
+  listEvents: (params?: { page?: number; limit?: number; status?: string }) =>
     request<{ items: AlarmEvent[]; total: number }>({
       url: '/alarms/events',
       method: 'GET',
       params,
+    }),
+
+  handleEvent: (id: number, data: { result: string }) =>
+    request<{ id: number; handled_status: string }>({
+      url: `/alarms/events/${id}/handle`,
+      method: 'POST',
+      data,
     }),
 }

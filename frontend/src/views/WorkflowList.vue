@@ -32,7 +32,6 @@
       @current-change="loadWorkflows"
     />
 
-    <!-- Create Dialog -->
     <el-dialog v-model="createVisible" title="新建工作流" width="500px">
       <el-form :model="form" label-width="80px">
         <el-form-item label="名称">
@@ -54,7 +53,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getWorkflows, createWorkflow, deleteWorkflow, type Workflow } from '@/api/workflows'
+import { workflowApi, type Workflow } from '@/api/workflows'
 
 const router = useRouter()
 const workflows = ref<Workflow[]>([])
@@ -80,9 +79,9 @@ const statusLabel = (status: string) => {
 const loadWorkflows = async () => {
   loading.value = true
   try {
-    const res = await getWorkflows({ page: page.value, limit: limit.value })
-    workflows.value = res.data.list
-    total.value = res.data.total
+    const res = await workflowApi.list({ page: page.value, limit: limit.value })
+    workflows.value = res.items
+    total.value = res.total
   } catch {
     ElMessage.error('加载工作流失败')
   } finally {
@@ -102,7 +101,7 @@ const handleCreate = async () => {
   }
   creating.value = true
   try {
-    await createWorkflow(form.value)
+    await workflowApi.create(form.value)
     ElMessage.success('创建成功')
     createVisible.value = false
     loadWorkflows()
@@ -120,7 +119,7 @@ const openEditor = (wf: Workflow) => {
 const handleDelete = async (wf: Workflow) => {
   try {
     await ElMessageBox.confirm(`确定删除工作流 "${wf.name}"？`, '确认删除', { type: 'warning' })
-    await deleteWorkflow(wf.id)
+    await workflowApi.delete(wf.id)
     ElMessage.success('删除成功')
     loadWorkflows()
   } catch {
@@ -133,7 +132,7 @@ onMounted(loadWorkflows)
 
 <style scoped>
 .workflow-list {
-  padding: 20px;
+  padding: 0;
 }
 .header {
   display: flex;

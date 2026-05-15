@@ -7,6 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   plugins: [vue()],
+  base: './',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
@@ -29,7 +30,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: '../backend/www',
+    outDir: '/workspace/build/backend/www',
     emptyOutDir: true,
   },
 })

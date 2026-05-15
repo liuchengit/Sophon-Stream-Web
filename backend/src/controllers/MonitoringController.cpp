@@ -96,16 +96,46 @@ void MonitoringController::asyncHandleHttpRequest(const HttpRequestPtr& req,
     } else if (path == "/api/v1/monitoring/stats") {
         int onlineDevices = db::DeviceRepository::count("online", "");
         int offlineDevices = db::DeviceRepository::count("offline", "");
-        int runningTasks = db::TaskRepository::count("running");
-        int stoppedTasks = db::TaskRepository::count("stopped");
-        int alarmCount = db::AlarmEventRepository::count();
+        int totalDevices = onlineDevices + offlineDevices + db::DeviceRepository::count("offline", "tpu") + db::DeviceRepository::count("online", "camera");
+
+        auto allDevices = db::DeviceRepository::findAll();
+        totalDevices = allDevices.size();
+        onlineDevices = 0;
+        offlineDevices = 0;
+        for (const auto& d : allDevices) {
+            if (d.status == "online") onlineDevices++;
+            else offlineDevices++;
+        }
+
+        auto allTasks = db::TaskRepository::findAll();
+        int totalTasks = allTasks.size();
+        int runningTasks = 0;
+        int stoppedTasks = 0;
+        for (const auto& t : allTasks) {
+            if (t.status == "running") runningTasks++;
+            else if (t.status == "stopped") stoppedTasks++;
+        }
+
+        int totalAlarms = db::AlarmEventRepository::count();
+
+        auto allAlgos = db::AlgorithmRepository::findAll();
+        int totalAlgos = allAlgos.size();
+        int activeAlgos = 0;
+        for (const auto& a : allAlgos) {
+            if (a.status == "active") activeAlgos++;
+        }
 
         nlohmann::json j;
-        j["online_devices"] = onlineDevices;
-        j["offline_devices"] = offlineDevices;
-        j["running_tasks"] = runningTasks;
-        j["stopped_tasks"] = stoppedTasks;
-        j["alarm_count"] = alarmCount;
+        j["devices"]["total"] = totalDevices;
+        j["devices"]["online"] = onlineDevices;
+        j["devices"]["offline"] = offlineDevices;
+        j["tasks"]["total"] = totalTasks;
+        j["tasks"]["running"] = runningTasks;
+        j["tasks"]["stopped"] = stoppedTasks;
+        j["alarms"]["total"] = totalAlarms;
+        j["alarms"]["today"] = totalAlarms;
+        j["algorithms"]["total"] = totalAlgos;
+        j["algorithms"]["active"] = activeAlgos;
 
         callback(successResponse(toCppJson(j)));
 
